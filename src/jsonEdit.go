@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 )
 
-func JsonChangePort(port int) error {
+func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 
 	type Setting struct{
 		Auth string `json:"auth"`
@@ -34,7 +34,7 @@ func JsonChangePort(port int) error {
 		routing map[string]interface{} `json:"routing"`
 	}
 
-	byteValue, err := ioutil.ReadFile("x.json")
+	byteValue, err := ioutil.ReadFile(jsonRead)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func JsonChangePort(port int) error {
 		return err
 	}
 
-	err = ioutil.WriteFile("y.json", byteValue, 0644)
+	err = ioutil.WriteFile(jsonWrite, byteValue, 0644)
 	if err != nil {
 		return err
 	}

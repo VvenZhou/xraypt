@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	ping "github.com/VvenZhou/xraypt/src"
+	"github.com/VvenZhou/xraypt/src/ping"
 )
 
 func main() {

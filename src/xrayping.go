@@ -14,7 +14,7 @@ import (
 	"time"
 	"errors"
 
-	"github.com/VvenZhou/xraypt/src"
+	"github.com/VvenZhou/xraypt/src/jsonEdit"
 )
 
 func Run(jsonPath string) (*Cmd, io.ReadCloser) {
@@ -73,20 +73,23 @@ func GetFreePort() (port int, err error) {
 	return
 }
 
-func XrayPing(jsonPath string) (int, error) {
+func XrayPing(jsonRead string) (int, error) {
 	const timeout = 1000 //ms
 	const count = 5 //count of ping
 	var totalDelay, avgDelay int
 	var fail int = 0
 
-	cmd, _ := Run(jsonPath)
+	jsonWrite := []string{"/tmp/tmp_", jsonPath}
+	strings.Join(jsonWrite, "")
+	err := jsonEdit.JsonChangePort(jsonRead, jsonWrite, port)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cmd, _ := Run(jsonWrite)
 
 	port, _ := GetFreePort()
 	//fmt.Println(port)
-	err := JsonChangePort(port)
-	if err != nil {
-		fmt.Println(err)
-	}
 
 	for i := 0; i < count; i++ {
 		delay, err := Ping(port, timeout)
@@ -98,16 +101,15 @@ func XrayPing(jsonPath string) (int, error) {
 			fmt.Println(delay)
 		}
 	}
+
+	if err = cmd.Process.Kill(); err != nil {
+		log.Fatal("failed to kill process: ", err)
+	}
+
 	if fail == 5 {
 		//fmt.Println("None")
-		if err = cmd.Process.Kill(); err != nil {
-			log.Fatal("failed to kill process: ", err)
-		}
 		return 0, errors.New("Ping not accessable")
 	}else{
-		if err = cmd.Process.Kill(); err != nil {
-			log.Fatal("failed to kill process: ", err)
-		}
 		avgDelay = int(totalDelay/(count-fail))
 		fmt.Printf("avgDelay: %d\n", avgDelay)
 		return avgDelay, nil
