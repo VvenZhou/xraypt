@@ -1,0 +1,61 @@
+package jsonEdit
+
+import (
+	"encoding/json"
+	"io/ioutil"
+)
+
+func JsonChangePort(port int) error {
+
+	type Setting struct{
+		Auth string `json:"auth"`
+		IP string `json:"ip"`
+		Udp bool `json:"udp"`
+	}
+	type Logs struct{
+		Access string `json:"access"`
+		Error string `json:"error"`
+		Loglevel string `json:"loglevel"`
+	}
+
+	type Inbound struct{
+		Tag string `json:"tag"`
+		Listen string `json:"listen"`
+		Protocol string `json:"protocol"`
+		Port int `json:"port"`
+		Settings Setting `json:"settings"`
+	}
+
+	type Config struct{
+		Log Logs `json:"log"`
+		Inbounds []Inbound `json:"inbounds"`
+		Outbounds []interface{} `json:"outbounds"`
+		Dns map[string]interface{} `json:"dns"`
+		routing map[string]interface{} `json:"routing"`
+	}
+
+	byteValue, err := ioutil.ReadFile("x.json")
+	if err != nil {
+		return err
+	}
+
+	var con Config
+
+	err = json.Unmarshal(byteValue, &con)
+	if err != nil {
+		return err
+	}
+
+	con.Inbounds[1].Port = port
+
+	byteValue, err = json.MarshalIndent(con, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile("y.json", byteValue, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
