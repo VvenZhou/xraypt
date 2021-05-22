@@ -1,34 +1,38 @@
 package speedtest
 
 import (
-	"fmt"
-	"http"
+	"net/http"
+	"strings"
 	"net/url"
+	"time"
 	"strconv"
-	"github.com/VvenZhou/xraypt/src/speedtest"
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
 
-func XraySpeed() {
-	port, _ := tools.GetFreePort()
+func XraySpeedTest(jsonPath string, timeout int) (string, float64, float64) {
+	var x tools.Xray
+	x.Init(jsonPath)
+	x.Run()
 
-	cmd := tools.RunXray(jsonPath)
-
-	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
+	var t time.Duration = time.Duration(timeout) * time.Millisecond
+	str := []string{"http://127.0.0.1", strconv.Itoa(x.Port)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
 
-	user, _ := speedtest.FetchUserInfo(myClient)
+	user, _ := FetchUserInfo(myClient)
 
-	serverList, _ := speedtest.FetchServerList(user, myClient)
-	targets, _ := speedtest.serverList.FindServer([]int{})
+	serverList, _ := FetchServerList(user, myClient)
+	targets, _ := serverList.FindServer([]int{})
 
 	for _, s := range targets {
-		s.PingTest(myClient)
+		//s.PingTest(myClient)
 		s.DownloadTest(false, myClient)
 		s.UploadTest(false, myClient)
 
-		fmt.Printf("Latency: %s, Download: %f, Upload: %f\n", s.Latency, s.DLSpeed, s.ULSpeed)
+		x.Stop()
+
+		return s.Country, s.DLSpeed, s.ULSpeed
 	}
+	return "", 0.0, 0.0
 }

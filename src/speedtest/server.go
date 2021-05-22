@@ -59,7 +59,7 @@ func (b ByDistance) Less(i, j int) bool {
 }
 
 // FetchServerList retrieves a list of available servers
-func FetchServerList(user *User, myClient http.Client) (ServerList, error) {
+func FetchServerList(user *User, myClient *http.Client) (ServerList, error) {
 	// Fetch xml server data
 	resp, err := myClient.Get("http://www.speedtest.net/speedtest-servers-static.php")
 	if err != nil {

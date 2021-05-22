@@ -23,7 +23,7 @@ type Users struct {
 }
 
 // FetchUserInfo returns information about caller determined by speedtest.net
-func FetchUserInfo(myClient http.Client) (*User, error) {
+func FetchUserInfo(myClient *http.Client) (*User, error) {
 	// Fetch xml user data
 	resp, err := myClient.Get("http://speedtest.net/speedtest-config.php")
 	if err != nil {

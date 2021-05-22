@@ -4,21 +4,79 @@ import(
 	"log"
 	"net"
 	"os/exec"
+	"os"
+	"time"
+	"strings"
 )
 
-func RunXray(jsonPath string) (*exec.Cmd) {
-	cmd := exec.Command("tools/xray", "-c", jsonPath)
+type Xray struct{
+	Port int
+	JsonPath string
+
+	cmd *exec.Cmd
+}
+
+func (x *Xray) Init(jsonPath string) error {
+	x.Port, _ = GetFreePort()
+
+	s := []string{"/tmp/tmp_", jsonPath}
+	x.JsonPath = strings.Join(s, "")
+	err := JsonChangePort(jsonPath, x.JsonPath, x.Port)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (x *Xray) Run() error {
+	x.cmd = exec.Command("tools/xray", "-c", x.JsonPath)
 	//stdout, _ := cmd.StdoutPipe()
 
-	err := cmd.Start()
+	err := x.cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
+		return err
 	}
 
-	log.Printf("xray executing, using json: %s\n", jsonPath)
+	log.Printf("xray executing, using json: %s\n", x.JsonPath)
+	time.Sleep(500 * time.Millisecond)
+	log.Println("xray started!")
 	//go print(stdout)
-	return cmd
+	return nil
+
 }
+
+func (x *Xray) Stop() error {
+	err := x.cmd.Process.Kill()
+	if err != nil {
+		//log.Fatal(err)
+		return err
+	}
+
+	err = os.Remove(x.JsonPath)
+	if err != nil {
+		//log.Fatal(err)
+		return err
+	}
+	log.Println("xray stopped.")
+	return nil
+}
+
+//func RunXray(jsonPath string) (*exec.Cmd) {
+//	cmd := exec.Command("tools/xray", "-c", jsonPath)
+//	//stdout, _ := cmd.StdoutPipe()
+//
+//	err := cmd.Start()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	log.Printf("xray executing, using json: %s\n", jsonPath)
+//	time.Sleep(500 * time.Millisecond)
+//	log.Println("xray started!")
+//	//go print(stdout)
+//	return cmd
+//}
 
 //func print(stdout io.ReadCloser) {
 //	for {

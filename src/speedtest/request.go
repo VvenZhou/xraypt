@@ -16,7 +16,7 @@ var ulSizes = [...]int{100, 300, 500, 800, 1000, 1500, 2500, 3000, 3500, 4000} /
 var client = http.Client{}
 
 // DownloadTest executes the test to measure download speed
-func (s *Server) DownloadTest(savingMode bool, myClient http.Client) error {
+func (s *Server) DownloadTest(savingMode bool, myClient *http.Client) error {
 
 	dlURL := strings.Split(s.URL, "/upload.php")[0]
 	eg := errgroup.Group{}
@@ -78,7 +78,7 @@ func (s *Server) DownloadTest(savingMode bool, myClient http.Client) error {
 }
 
 // UploadTest executes the test to measure upload speed
-func (s *Server) UploadTest(savingMode bool, myClient http.Client) error {
+func (s *Server) UploadTest(savingMode bool, myClient *http.Client) error {
 	// Warm up
 	sTime := time.Now()
 	eg := errgroup.Group{}
@@ -137,7 +137,7 @@ func (s *Server) UploadTest(savingMode bool, myClient http.Client) error {
 	return nil
 }
 
-func dlWarmUp(dlURL string, myClient http.Client) error {
+func dlWarmUp(dlURL string, myClient *http.Client) error {
 	size := dlSizes[2]
 	xdlURL := dlURL + "/random" + strconv.Itoa(size) + "x" + strconv.Itoa(size) + ".jpg"
 
@@ -151,7 +151,7 @@ func dlWarmUp(dlURL string, myClient http.Client) error {
 	return nil
 }
 
-func ulWarmUp(ulURL string, myClient http.Client) error {
+func ulWarmUp(ulURL string, myClient *http.Client) error {
 	size := ulSizes[4]
 	v := url.Values{}
 	v.Add("content", strings.Repeat("0123456789", size*100-51))
@@ -166,7 +166,7 @@ func ulWarmUp(ulURL string, myClient http.Client) error {
 	return nil
 }
 
-func downloadRequest(dlURL string, w int, myClient http.Client) error {
+func downloadRequest(dlURL string, w int, myClient *http.Client) error {
 	size := dlSizes[w]
 	xdlURL := dlURL + "/random" + strconv.Itoa(size) + "x" + strconv.Itoa(size) + ".jpg"
 
@@ -180,7 +180,7 @@ func downloadRequest(dlURL string, w int, myClient http.Client) error {
 	return nil
 }
 
-func uploadRequest(ulURL string, w int, myClient http.Client) error {
+func uploadRequest(ulURL string, w int, myClient *http.Client) error {
 	size := ulSizes[w]
 	v := url.Values{}
 	v.Add("content", strings.Repeat("0123456789", size*100-51))
@@ -196,7 +196,7 @@ func uploadRequest(ulURL string, w int, myClient http.Client) error {
 }
 
 // PingTest executes test to measure latency
-func (s *Server) PingTest(myClient http.Client) error {
+func (s *Server) PingTest(myClient *http.Client) error {
 	pingURL := strings.Split(s.URL, "/upload.php")[0] + "/latency.txt"
 
 	l := time.Duration(100000000000) // 10sec
