@@ -3,40 +3,16 @@ package ping
 import (
 	"fmt"
 	"log"
-	"os/exec"
-//	"io"
-//	"bufio"
 	"net/http"
-	"net"
 	"net/url"
 	"strings"
 	"strconv"
 	"time"
 	"errors"
 
-	"github.com/VvenZhou/xraypt/src/jsonEdit"
+	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func Run(jsonPath string) (*Cmd, io.ReadCloser) {
-	cmd := exec.Command("../tools/xray", "-c", jsonPath)
-	stdout, _ := cmd.StdoutPipe()
-
-	err := cmd.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("xray executing, using json: %s\n", jsonPath)
-	return cmd, stdout
-}
-
-//func print(stdout io.ReadCloser) {
-//	for ;; {
-//		r := bufio.NewReader(stdout)
-//		line, _, err := r.ReadLine()
-//		fmt.Printf("%s\n%s\n", string(line), err)
-//	}
-//}
 
 func Ping(port int, interval int) (int, error){
 	var timeout time.Duration = time.Duration(interval) * time.Millisecond
@@ -61,17 +37,6 @@ func Ping(port int, interval int) (int, error){
 	return int(delay),nil
 }
 
-func GetFreePort() (port int, err error) {
-	var a *net.TCPAddr
-	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
-		var l *net.TCPListener
-		if l, err = net.ListenTCP("tcp", a); err == nil {
-			defer l.Close()
-			return l.Addr().(*net.TCPAddr).Port, nil
-		}
-	}
-	return
-}
 
 func XrayPing(jsonRead string) (int, error) {
 	const timeout = 1000 //ms
@@ -79,26 +44,26 @@ func XrayPing(jsonRead string) (int, error) {
 	var totalDelay, avgDelay int
 	var fail int = 0
 
-	jsonWrite := []string{"/tmp/tmp_", jsonPath}
-	strings.Join(jsonWrite, "")
-	err := jsonEdit.JsonChangePort(jsonRead, jsonWrite, port)
+	port, _ := tools.GetFreePort()
+
+	s := []string{"/tmp/tmp_", jsonRead}
+	jsonWrite := strings.Join(s, "")
+	err := tools.JsonChangePort(jsonRead, jsonWrite, port)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	cmd, _ := Run(jsonWrite)
-
-	port, _ := GetFreePort()
-	//fmt.Println(port)
+	cmd := tools.RunXray(jsonWrite)
+	time.Sleep(500 * time.Millisecond)
 
 	for i := 0; i < count; i++ {
 		delay, err := Ping(port, timeout)
 		if err != nil {
 			fail += 1
-			fmt.Print(err)
+			fmt.Println(err)
 		}else{
-			totalDelay += delay
 			fmt.Println(delay)
+			totalDelay += delay
 		}
 	}
 
@@ -111,7 +76,7 @@ func XrayPing(jsonRead string) (int, error) {
 		return 0, errors.New("Ping not accessable")
 	}else{
 		avgDelay = int(totalDelay/(count-fail))
-		fmt.Printf("avgDelay: %d\n", avgDelay)
+		//fmt.Printf("avgDelay: %d\n", avgDelay)
 		return avgDelay, nil
 	}
 }

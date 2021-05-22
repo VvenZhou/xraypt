@@ -1,12 +1,20 @@
-package speed
+package speedtest
 
 import (
 	"fmt"
-	"github.com/VvenZhou/xraypt"
+	"http"
+	"net/url"
+	"strconv"
+	"github.com/VvenZhou/xraypt/src/speedtest"
+	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func main() {
-	const port = 8123
+
+func XraySpeed() {
+	port, _ := tools.GetFreePort()
+
+	cmd := tools.RunXray(jsonPath)
+
 	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
@@ -14,7 +22,7 @@ func main() {
 	user, _ := speedtest.FetchUserInfo(myClient)
 
 	serverList, _ := speedtest.FetchServerList(user, myClient)
-	targets, _ := serverList.FindServer([]int{})
+	targets, _ := speedtest.serverList.FindServer([]int{})
 
 	for _, s := range targets {
 		s.PingTest(myClient)

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/VvenZhou/xraypt/src/ping"
+	"github.com/VvenZhou/xraypt/src/speedtest"
 )
 
 func main() {
@@ -10,6 +11,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}else{
-		fmt.Println(avgDelay)
+		fmt.Println("avgDelay:", avgDelay)
 	}
 }
+
