@@ -7,6 +7,7 @@ import(
 	"os"
 	"time"
 	"strings"
+	"syscall"
 )
 
 type Xray struct{
@@ -30,12 +31,14 @@ func (x *Xray) Init(jsonPath string) error {
 
 func (x *Xray) Run() error {
 	x.cmd = exec.Command("tools/xray", "-c", x.JsonPath)
+	x.cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGTERM,
+	}
 	//stdout, _ := cmd.StdoutPipe()
 
 	err := x.cmd.Start()
 	if err != nil {
-		//log.Fatal(err)
-		return err
+		log.Fatal(err)
 	}
 
 	log.Printf("xray executing, using json: %s\n", x.JsonPath)
@@ -47,11 +50,18 @@ func (x *Xray) Run() error {
 }
 
 func (x *Xray) Stop() error {
-	err := x.cmd.Process.Kill()
+	err := x.cmd.Process.Signal(syscall.SIGTERM)
+
+	//err := x.cmd.Process.Kill()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	ps, err := x.cmd.Process.Wait()
 	if err != nil {
-		//log.Fatal(err)
-		return err
+		log.Fatal(err)
 	}
+	//log.Println(ps.Success())
 
 	err = os.Remove(x.JsonPath)
 	if err != nil {
