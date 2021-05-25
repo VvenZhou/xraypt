@@ -61,11 +61,11 @@ func (x *Xray) Stop() error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//log.Println(ps.Success())
+	log.Println(ps.Success())
 
 	err = os.Remove(x.JsonPath)
 	if err != nil {
-		//log.Fatal(err)
+		log.Fatal(err)
 		return err
 	}
 	log.Println("xray stopped.")

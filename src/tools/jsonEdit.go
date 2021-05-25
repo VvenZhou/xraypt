@@ -46,7 +46,12 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 		return err
 	}
 
-	con.Inbounds[1].Port = port
+	for i, in := range con.Inbounds {
+		if in.Protocol == "http" {
+			con.Inbounds[i].Port = port
+		}
+		con.Inbounds[0].Port = port
+	}
 
 	byteValue, err = json.MarshalIndent(con, "", "    ")
 	if err != nil {

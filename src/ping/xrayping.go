@@ -39,47 +39,51 @@ func Ping(port int, timeout int) (int, error){
 }
 
 
-func XrayPing(jsonPath string, count int, timeout int) (int, error) {
-	var totalDelay int = 0
-	var avgDelay int = 0
-	var fail int = 0
-	var max int = 0
+func XrayPing(jobs <-chan string, result chan<- int, count int, timeout int) {
+	for jsonPath := range jobs {
+		var totalDelay int = 0
+		var avgDelay int = 0
+		var fail int = 0
+		var max int = 0
 
-	var x tools.Xray
-	err := x.Init(jsonPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = x.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for i := 0; i < count; i++ {
-		delay, err := Ping(x.Port, timeout)
+		var x tools.Xray
+		err := x.Init(jsonPath)
 		if err != nil {
-			fail += 1
-			fmt.Println(err)
-		}else{
-			if max < delay {
-				max = delay
-			}
-			fmt.Println(delay)
-			totalDelay += delay
+			log.Fatal(err)
 		}
-	}
+		err = x.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	err = x.Stop()
-	if err != nil {
-		log.Fatal(err)
-	}
+		for i := 0; i < count; i++ {
+			delay, err := Ping(x.Port, timeout)
+			if err != nil {
+				fail += 1
+				fmt.Println(err)
+			}else{
+				if max < delay {
+					max = delay
+				}
+				fmt.Println(delay)
+				totalDelay += delay
+			}
+		}
 
-	if fail == 5 {
-		//fmt.Println("None")
-		return 0, errors.New("Ping not accessable")
-	}else{
-		avgDelay = (totalDelay-max)/(count-fail-1)
-		//fmt.Printf("avgDelay: %d\n", avgDelay)
-		return avgDelay, nil
+		err = x.Stop()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if fail == 5 {
+			//fmt.Println("None")
+			//return 0, errors.New("Ping not accessable")
+			result <- 0
+		}else{
+			avgDelay = (totalDelay-max)/(count-fail-1)
+			//fmt.Printf("avgDelay: %d\n", avgDelay)
+			//return avgDelay, nil
+			result <- avgDelay
+		}
 	}
 }
