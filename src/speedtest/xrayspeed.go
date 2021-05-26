@@ -15,7 +15,7 @@ import (
 func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, timeout int) {
 	for node := range jobs {
 		var x tools.Xray
-		x.Init(8123, node.JsonPath)
+		x.Init(8124, node.JsonPath)
 		x.Run(true)
 
 		var t time.Duration = time.Duration(timeout) * time.Millisecond

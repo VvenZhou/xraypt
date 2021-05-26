@@ -74,12 +74,13 @@ func (x *Xray) Init(port int, jsonPath string) error {
 
 func (x *Xray) Run(randPort bool) error {
 	if randPort {
+		log.Println("randport")
 		x.randPort = true
-		port, _ := GetFreePort()
-		s := []string{"temp/", "xrayRun_port_", strconv.Itoa(port), "_.json"}
+		x.Port, _ = GetFreePort()
+		s := []string{"temp/", "xrayRun_port_", strconv.Itoa(x.Port), ".json"}
 
 		path := strings.Join(s, "")
-		err := JsonChangePort(x.JsonPath, path, port)
+		err := JsonChangePort(x.JsonPath, path, x.Port)
 		if err != nil {
 			return err
 		}

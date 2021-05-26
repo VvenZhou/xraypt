@@ -53,7 +53,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node,
 		n.CreateJson("jsons/")
 
 		var x tools.Xray
-		err := x.Init(8123, n.JsonPath)
+		err := x.Init(8124, n.JsonPath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -81,7 +81,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node,
 			log.Fatal(err)
 		}
 
-		if fail == 5 {
+		if fail == 4 {
 			//fmt.Println("None")
 			//return 0, errors.New("Ping not accessable")
 		}else{
