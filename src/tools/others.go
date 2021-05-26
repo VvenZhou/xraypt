@@ -8,28 +8,83 @@ import(
 	"time"
 	"strings"
 	"syscall"
+	"strconv"
+	"fmt"
+	"encoding/json"
+	"io/ioutil"
 )
+
+type Node struct {
+	Id string
+	ShareLink string
+	JsonPath string
+	AvgDelay int
+	Country string
+	DLSpeed float64
+	ULSpeed float64
+}
 
 type Xray struct{
 	Port int
 	JsonPath string
-
+	randPort bool
 	cmd *exec.Cmd
 }
 
-func (x *Xray) Init(jsonPath string) error {
-	x.Port, _ = GetFreePort()
-
-	s := []string{"/tmp/tmp_", jsonPath}
-	x.JsonPath = strings.Join(s, "")
-	err := JsonChangePort(jsonPath, x.JsonPath, x.Port)
-	if err != nil {
-		return err
-	}
-	return nil
+func (n *Node) Init(id string, shareLink string) {
+	n.Id = id
+	n.ShareLink = shareLink
 }
 
-func (x *Xray) Run() error {
+func (n *Node) CreateJson(dirPath string) {
+	var vmout VmessOut
+	var con Config
+	VmLinkToVmOut(&vmout, n.ShareLink)
+	VmOutToConfig(&con, vmout)
+
+	s := []string{dirPath, n.Id, ".json"}
+	n.JsonPath = strings.Join(s, "")
+
+	byteValue, err := json.MarshalIndent(con, "", "    ")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func (x *Xray) Init(port int, jsonPath string) error {
+	x.Port = port
+	x.JsonPath = jsonPath
+	x.randPort = false
+
+	return nil
+
+	//s := []string{"/tmp/tmp_", jsonPath}
+	//x.JsonPath = strings.Join(s, "")
+	//err := JsonChangePort(jsonPath, x.JsonPath, x.Port)
+	//if err != nil {
+	//	return err
+	//}
+	//return nil
+}
+
+func (x *Xray) Run(randPort bool) error {
+	if randPort {
+		x.randPort = true
+		port, _ := GetFreePort()
+		s := []string{"temp/", "xrayRun_port_", strconv.Itoa(port), "_.json"}
+
+		path := strings.Join(s, "")
+		err := JsonChangePort(x.JsonPath, path, port)
+		if err != nil {
+			return err
+		}
+		x.JsonPath = path
+	}
 	x.cmd = exec.Command("tools/xray", "-c", x.JsonPath)
 	x.cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGTERM,
@@ -46,7 +101,6 @@ func (x *Xray) Run() error {
 	log.Println("xray started!")
 	//go print(stdout)
 	return nil
-
 }
 
 func (x *Xray) Stop() error {
@@ -63,10 +117,11 @@ func (x *Xray) Stop() error {
 	}
 	log.Println(ps.Success())
 
-	err = os.Remove(x.JsonPath)
-	if err != nil {
-		log.Fatal(err)
-		return err
+	if x.randPort {
+		err = os.Remove(x.JsonPath)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	log.Println("xray stopped.")
 	return nil

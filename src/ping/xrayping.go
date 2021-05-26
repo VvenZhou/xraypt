@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 	"errors"
+	"sync"
+	"math/rand"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
@@ -39,19 +41,23 @@ func Ping(port int, timeout int) (int, error){
 }
 
 
-func XrayPing(jobs <-chan string, result chan<- int, count int, timeout int) {
-	for jsonPath := range jobs {
+func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node, count int, timeout int) {
+	for vm := range jobs {
 		var totalDelay int = 0
 		var avgDelay int = 0
 		var fail int = 0
 		var max int = 0
 
+		var n tools.Node
+		n.Init(strconv.Itoa(rand.Intn(99999)), vm)
+		n.CreateJson("jsons/")
+
 		var x tools.Xray
-		err := x.Init(jsonPath)
+		err := x.Init(8123, n.JsonPath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = x.Run()
+		err = x.Run(true)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -78,12 +84,13 @@ func XrayPing(jobs <-chan string, result chan<- int, count int, timeout int) {
 		if fail == 5 {
 			//fmt.Println("None")
 			//return 0, errors.New("Ping not accessable")
-			result <- 0
 		}else{
 			avgDelay = (totalDelay-max)/(count-fail-1)
 			//fmt.Printf("avgDelay: %d\n", avgDelay)
 			//return avgDelay, nil
-			result <- avgDelay
+			n.AvgDelay = avgDelay
+			result <- &n
 		}
+		wg.Done()
 	}
 }
