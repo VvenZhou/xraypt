@@ -7,32 +7,32 @@ import (
 
 func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 
-	type Setting struct{
-		Auth string `json:"auth"`
-		IP string `json:"ip"`
-		Udp bool `json:"udp"`
-	}
-	type Logs struct{
-		Access string `json:"access"`
-		Error string `json:"error"`
-		Loglevel string `json:"loglevel"`
-	}
-
-	type Inbound struct{
-		Tag string `json:"tag"`
-		Listen string `json:"listen"`
-		Protocol string `json:"protocol"`
-		Port int `json:"port"`
-		Settings Setting `json:"settings"`
-	}
-
-	type Config struct{
-		Log Logs `json:"log"`
-		Inbounds []Inbound `json:"inbounds"`
-		Outbounds []interface{} `json:"outbounds"`
-		Dns map[string]interface{} `json:"dns"`
-		routing map[string]interface{} `json:"routing"`
-	}
+//	type Setting struct{
+//		Auth string `json:"auth"`
+//		IP string `json:"ip"`
+//		Udp bool `json:"udp"`
+//	}
+//	type Logs struct{
+//		Access string `json:"access"`
+//		Error string `json:"error"`
+//		Loglevel string `json:"loglevel"`
+//	}
+//
+//	type Inbound struct{
+//		Tag string `json:"tag"`
+//		Listen string `json:"listen"`
+//		Protocol string `json:"protocol"`
+//		Port int `json:"port"`
+//		Settings Setting `json:"settings"`
+//	}
+//
+//	type Config struct{
+//		Log Logs `json:"log"`
+//		Inbounds []Inbound `json:"inbounds"`
+//		Outbounds []interface{} `json:"outbounds"`
+//		Dns map[string]interface{} `json:"dns"`
+//		routing map[string]interface{} `json:"routing"`
+//	}
 
 	byteValue, err := ioutil.ReadFile(jsonRead)
 	if err != nil {
@@ -40,17 +40,23 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 	}
 
 	var con Config
-
 	err = json.Unmarshal(byteValue, &con)
 	if err != nil {
 		return err
 	}
 
-	for i, in := range con.Inbounds {
-		if in.Protocol == "http" {
-			con.Inbounds[i].Port = port
+//	for i, in := range con.Inbounds {
+//		if in.Protocol == "http" {
+//			con.Inbounds[i].Port = port
+//		}
+//		con.Inbounds[0].Port = port
+//	}
+	for _, in := range con.Inbounds {
+		inMap := in.(map[string]interface{})
+		if inMap["protocol"] == "http" {
+			//con.Inbounds[i]["port"] = port
+			inMap["port"] = port
 		}
-		con.Inbounds[0].Port = port
 	}
 
 	byteValue, err = json.MarshalIndent(con, "", "    ")
