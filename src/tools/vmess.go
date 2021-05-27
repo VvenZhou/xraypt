@@ -115,8 +115,42 @@ func VmOutToConfig(con *Config, vmOut VmessOut ) {
 	(*con).Log.Loglevel = "error"
 	(*con).Inbounds = []interface{}{ htIn, soIn }
 	(*con).Outbounds = []interface{}{ vmOut }
-	(*con).Dns.Servers = []string{"8.8.8.8", "1.1.1.1"}
+	(*con).Dns.Servers = []interface{}{ "8.8.8.8", "1.1.1.1" }
 	(*con).Routing.DomainStrategy = "AsIs"
 	//(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{{Type: "field", Domain: []string{"geosite:google", "domain:speedtest.com"}, OutboundTag: "proxy"}}
 	(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{}
+}
+
+func VmConfigFinal(con *Config) {
+
+	type DnsServer struct {
+		Address string `json:"address"`
+		Domains []string `json:"domains"`
+	}
+
+	type RoutingRule struct{
+		Type string `json:"type"`
+		Domain []string `json:"domain"`
+		OutboundTag string `json:"outboundTag"`
+	}
+
+	type Outbound struct{
+		Protocol string `json:"protocol"`
+		Tag string `json:"tag"`
+	}
+
+	s1 := DnsServer{ Address: "8.8.8.8", Domains: []string{"geosite:geolocation-!cn"}}
+	s2 := DnsServer{ Address: "1.1.1.1", Domains: []string{"geosite:geolocation-!cn"}}
+	s3 := DnsServer{ Address: "223.5.5.5", Domains: []string{"geosite:cn"}}
+
+	r1 := RoutingRule{ Type: "field", Domain: []string{"geosite:category-ads-all"}, OutboundTag: "block"}
+	r2 := RoutingRule{ Type: "field", Domain: []string{"geosite:cn", "geosite:bing", "geosite:category-media-cn", "geosite:apple"}, OutboundTag: "direct"}
+	r3 := RoutingRule{ Type: "field", Domain: []string{"geosite:geolocation-!cn", "geosite:gfw", "geosite:github", "geosite:telegram"}, OutboundTag: "proxy"}
+
+	o1 := Outbound{ Protocol: "freedom", Tag: "direct"}
+	o2 := Outbound{ Protocol: "blackhole", Tag: "block"}
+
+	(*con).Dns.Servers = []interface{}{ s1, s2, s3, "localhost"}
+	(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{r1, r2, r3}
+	(*con).Outbounds = append((*con).Outbounds, o1, o2)
 }

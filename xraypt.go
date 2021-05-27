@@ -20,6 +20,12 @@ var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray",
 var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
 
 func main() {
+
+//	var con tools.Config
+//	tools.VmConfigFinal(&con)
+//	fmt.Printf("%+v\n", con)
+//	os.Exit(0)
+
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
 	pingJob := make(chan string, 500)
@@ -47,7 +53,6 @@ func main() {
 		n := <-pingResult
 		goodPingNodes = append(goodPingNodes, n)
 	}
-//	sort.Sort(tools.ByDelay(goodPingNodes))
 	for _, n := range goodPingNodes {
 		fmt.Println("avgDelay:", (*n).AvgDelay)
 	}
@@ -70,7 +75,6 @@ func main() {
 	for i := 1; i <= goodSpeeds; i++ {
 		n := <-speedResult
 		goodSpeedNodes = append(goodSpeedNodes, n)
-		//fmt.Println((*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 	}
 
 	sort.Sort(tools.ByDelay(goodSpeedNodes))
@@ -80,7 +84,7 @@ func main() {
 	for i, n := range goodSpeedNodes {
 		fmt.Println((*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 		(*n).Id = strconv.Itoa(i)
-		(*n).CreateJson("jsons/")
+		(*n).CreateFinalJson("jsons/")
 	}
 }
 

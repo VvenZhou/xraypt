@@ -9,7 +9,7 @@ type Config struct{
 	Inbounds []interface{} `json:"inbounds"`
 	Outbounds []interface{} `json:"outbounds"`
 	Dns struct {
-		Servers []string `json:"servers"`
+		Servers []interface{} `json:"servers"`
 	} `json:"dns"`
 	Routing struct {
 		DomainStrategy string `json:"domainStrategy"`

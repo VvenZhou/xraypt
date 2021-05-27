@@ -21,6 +21,8 @@ type Node struct {
 	Country string
 	DLSpeed float64
 	ULSpeed float64
+
+	Con *Config
 }
 
 type ByDLSpeed []*Node
@@ -56,10 +58,29 @@ func (n *Node) CreateJson(dirPath string) {
 	VmLinkToVmOut(&vmout, n.ShareLink)
 	VmOutToConfig(&con, vmout)
 
+	n.Con = &con
+
 	s := []string{dirPath, n.Id, ".json"}
 	n.JsonPath = strings.Join(s, "")
 
 	byteValue, err := json.MarshalIndent(con, "", "    ")
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (n *Node) CreateFinalJson(dirPath string) {
+	VmConfigFinal(n.Con)
+
+	s := []string{dirPath, n.Id, ".json"}
+	n.JsonPath = strings.Join(s, "")
+
+	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
 	if err != nil {
 		log.Println(err)
 	}
