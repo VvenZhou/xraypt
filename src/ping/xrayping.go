@@ -94,4 +94,3 @@ func Ping(port int, timeout int) (int, error){
 	return int(delay), nil
 }
 
-

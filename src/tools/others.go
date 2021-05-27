@@ -133,11 +133,13 @@ func (x *Xray) Stop() error {
 	//log.Println(ps.Success())
 
 	if x.randPort {
-		err = os.Remove(x.JsonPath)
-		if err != nil {
-			log.Fatal(err)
-		}
+		os.Remove(x.JsonPath)
+		//err = os.Remove(x.JsonPath)
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
 	}
+
 	//log.Println("xray stopped.")
 	return nil
 }

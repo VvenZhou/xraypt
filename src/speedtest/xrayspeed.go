@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 	"log"
+	"math"
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
@@ -61,8 +62,8 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 			log.Println("Speed got one!")
 
 			(*node).Country = s.Country
-			(*node).DLSpeed = s.DLSpeed
-			(*node).ULSpeed = s.ULSpeed
+			(*node).DLSpeed = math.Round(s.DLSpeed*100)/100
+			(*node).ULSpeed = math.Round(s.ULSpeed*100)/100
 			result <- node
 		}
 

@@ -74,8 +74,8 @@ func main() {
 	}
 
 	sort.Sort(tools.ByDelay(goodSpeedNodes))
-	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByULSpeed(goodSpeedNodes))
+	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 
 	for i, n := range goodSpeedNodes {
 		fmt.Println((*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
