@@ -23,22 +23,42 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 		myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
 
-		user, _ := FetchUserInfo(myClient)
+		user, err := FetchUserInfo(myClient)
+		if err != nil {
+			x.Stop()
+			wg.Done()
+			log.Println("[ERROR]", "Fetch user info:", err)
+			continue
+		}
 
-		serverList, _ := FetchServerList(user, myClient)
-		targets, _ := serverList.FindServer([]int{})
+		serverList, err := FetchServerList(user, myClient)
+		if err != nil {
+			x.Stop()
+			wg.Done()
+			log.Println("[ERROR]", "Fetch server list:", err)
+			continue
+		}
+		targets, err := serverList.FindServer([]int{})
+		if err != nil {
+			x.Stop()
+			wg.Done()
+			log.Println("[ERROR]", "Find server:", err)
+			continue
+		}
 
 		for _, s := range targets {
 			//s.PingTest(myClient)
-			log.Println("start Download testing...")
+			if s.Country == "China" {
+				log.Println("Speed Skipped for China.")
+				break
+			}
 			s.DownloadTest(false, myClient)
-			log.Println("Download testing finished")
-			log.Println("start Upload testing...")
+			if s.DLSpeed < 10.0 {
+				log.Println("DownSpeed too slow, skipped.")
+				break
+			}
 			s.UploadTest(false, myClient)
-			log.Println("Upload testing finished")
-
-			//x.Stop()
-			//return s.Country, s.DLSpeed, s.ULSpeed
+			log.Println("Speed got one!")
 
 			(*node).Country = s.Country
 			(*node).DLSpeed = s.DLSpeed

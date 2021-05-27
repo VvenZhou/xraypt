@@ -97,6 +97,7 @@ func FetchServerList(user *User, myClient *http.Client) (ServerList, error) {
 		}
 	}
 
+
 	// Calculate distance
 	for i := range list.Servers {
 		server := list.Servers[i]

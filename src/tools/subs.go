@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/base64"
-	"fmt"
+	"log"
 	"strings"
 
 )
@@ -21,7 +21,10 @@ func SubGetVms(subs []string) []string {
 			}
 		}
 	}
-	return vms
+	log.Println("length of vms", len(vms))
+	vmsNoDu := RemoveDuplicateStr(vms)
+	log.Println("length of vmsNoDu", len(vms))
+	return vmsNoDu
 }
 
 func SubGetStr(subLink string) string {
@@ -33,12 +36,12 @@ func SubGetStr(subLink string) string {
 	resp, _ := myClient.Get(subLink)
 	defer resp.Body.Close()
 	contents, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("SubString got!")
+	log.Println("SubString got!")
 	//return string(contents)
 
 	data, err := base64.StdEncoding.DecodeString(string(contents))
 	if err != nil {
-		fmt.Println("error:", err)
+		log.Println("error:", err)
 	}
 	return string(data)
 }

@@ -1,7 +1,7 @@
 package ping
 
 import (
-	"fmt"
+	//"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,6 +15,59 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
+func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node, count int, timeout int) {
+	for vm := range jobs {
+		var totalDelay int = 0
+		var avgDelay int = 0
+		var fail int = 0
+		var max int = 0
+
+		var n tools.Node
+		n.Init(strconv.Itoa(rand.Intn(99999)), vm)
+		n.CreateJson("temp/")
+
+		var x tools.Xray
+		err := x.Init(8124, n.JsonPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = x.Run(true)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for i := 0; i < count; i++ {
+			delay, err := Ping(x.Port, timeout)
+			if err != nil {
+				fail += 1
+				//log.Println(err)
+			}else{
+				if max < delay {
+					max = delay
+				}
+				totalDelay += delay
+			}
+		}
+
+		err = x.Stop()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if fail >= 4 {
+			//fmt.Println("None")
+			//return 0, errors.New("Ping not accessable")
+		}else{
+			avgDelay = (totalDelay-max)/(count-fail-1)
+			log.Println("ping got one!")
+			//fmt.Printf("avgDelay: %d\n", avgDelay)
+			//return avgDelay, nil
+			n.AvgDelay = avgDelay
+			result <- &n
+		}
+		wg.Done()
+	}
+}
 
 func Ping(port int, timeout int) (int, error){
 	var t time.Duration = time.Duration(timeout) * time.Millisecond
@@ -32,6 +85,7 @@ func Ping(port int, timeout int) (int, error){
 
 	defer resp.Body.Close()
 	if code != 204 {
+		log.Println("code is ", code, " instead of 204")
 		return 0, errors.New("Ping err: StatusCode is not 204")
 	}
 
@@ -41,56 +95,3 @@ func Ping(port int, timeout int) (int, error){
 }
 
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node, count int, timeout int) {
-	for vm := range jobs {
-		var totalDelay int = 0
-		var avgDelay int = 0
-		var fail int = 0
-		var max int = 0
-
-		var n tools.Node
-		n.Init(strconv.Itoa(rand.Intn(99999)), vm)
-		n.CreateJson("jsons/")
-
-		var x tools.Xray
-		err := x.Init(8124, n.JsonPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = x.Run(true)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		for i := 0; i < count; i++ {
-			delay, err := Ping(x.Port, timeout)
-			if err != nil {
-				fail += 1
-				fmt.Println(err)
-			}else{
-				if max < delay {
-					max = delay
-				}
-				fmt.Println(delay)
-				totalDelay += delay
-			}
-		}
-
-		err = x.Stop()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if fail == 4 {
-			//fmt.Println("None")
-			//return 0, errors.New("Ping not accessable")
-		}else{
-			avgDelay = (totalDelay-max)/(count-fail-1)
-			//fmt.Printf("avgDelay: %d\n", avgDelay)
-			//return avgDelay, nil
-			n.AvgDelay = avgDelay
-			result <- &n
-		}
-		wg.Done()
-	}
-}

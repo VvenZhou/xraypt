@@ -2,60 +2,85 @@ package main
 
 import (
 	"fmt"
-	//"encoding/json"
-	//"io/ioutil"
+	"log"
 	"github.com/VvenZhou/xraypt/src/ping"
-	//"github.com/VvenZhou/xraypt/src/speedtest"
+	"github.com/VvenZhou/xraypt/src/speedtest"
 	"github.com/VvenZhou/xraypt/src/tools"
 	//"time"
 	"sync"
+	"sort"
+	"strconv"
 )
 
 const pTimeout = 1500 //ms
 const pCount = 5
-const sTimeout = 15000 //ms
+const sTimeout = 20000 //ms
 
 var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2"}
+var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
 
 func main() {
-	//var vmLinks []string
-	//vmLinks = tools.SubGetVms(subs)
-	//for _, s := range vmLinks {
-	//}
-
-	vm := "vmess://eyJ2IjoiMiIsInBzIjoid3d3LnlvdW5lZWQud2luIiwiYWRkIjoiMjMuMjI1LjU3LjIwMyIsInBvcnQiOiI0NDMiLCJpZCI6IjgxMTc4MmQ5LTZjZGItNDVkZC05NDQ4LTFlYzRjNDdhZDU2NCIsImFpZCI6IjY0IiwibmV0Ijoid3MiLCJ0eXBlIjoibm9uZSIsImhvc3QiOiJ3d3cuMzQ0MjgzOTQueHl6IiwicGF0aCI6Ii9wYXRoLzMxMDkxMDIxMTkxNiIsInRscyI6InRscyJ9"
-
-	vm1 := "vmess://eyJ2IjogIjIiLCAicHMiOiAiZ2l0aHViLmNvbS9mcmVlZnEgLSBcdTdmOGVcdTU2ZmRDbG91ZGlubm92YXRpb25cdTY1NzBcdTYzNmVcdTRlMmRcdTVmYzMgMzUiLCAiYWRkIjogIjE1NC44NC4xLjM1IiwgInBvcnQiOiAiNDQzIiwgImlkIjogIjA0MTU3NDZjLTRkNmItNDlmYi05YThhLWU3NGFkNjE3MmQzZCIsICJhaWQiOiAiNjQiLCAibmV0IjogIndzIiwgInR5cGUiOiAibm9uZSIsICJob3N0IjogInd3dy4wMDcyMjU0Mi54eXoiLCAicGF0aCI6ICIvcGF0aC8zMTA5MTAyMTE5MTYiLCAidGxzIjogInRscyJ9"
-
+	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
-	pingJob := make(chan string, 100)
-	result := make(chan *tools.Node, 100)
+	pingJob := make(chan string, 500)
+	pingResult := make(chan *tools.Node, 500)
 
-	pingJob <- vm
-	pingJob <- vm1
-	wgPing.Add(1)
-	wgPing.Add(1)
-	go ping.XrayPing(&wgPing, pingJob, result, pCount, pTimeout)
-	go ping.XrayPing(&wgPing, pingJob, result, pCount, pTimeout)
+	for i := 1; i <= 50; i++ {
+		go ping.XrayPing(&wgPing, pingJob, pingResult, pCount, pTimeout)
+	}
+
+	var vmLinks []string
+	vmLinks = tools.SubGetVms(subJ)
+	for _, s := range vmLinks {
+		pingJob <- s
+		wgPing.Add(1)
+	}
 	close(pingJob)
+
+	log.Println("waitting for ping to be done...")
 	wgPing.Wait()
-	n := <-result
-	n2 := <-result
-	fmt.Println("avg0:", (*n).AvgDelay)
-	fmt.Println("avg0:", (*n2).AvgDelay)
+	log.Println("ping finished")
+	goodPingCnt := len(pingResult)
+	log.Printf("there are %d good pings\n", goodPingCnt)
 
-	//var wgSpeed sync.WaitGroup
-	//speedJob := make(chan *tools.Node, 100)
-	//speedResult := make(chan *tools.Node, 100)
-	//speedJob <- n
-	//wgSpeed.Add(1)
-	//go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, sTimeout)
-	//wgSpeed.Wait()
-	//fmt.Println((*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
+	for i := 1; i <= goodPingCnt; i++  {
+		n := <-pingResult
+		goodPingNodes = append(goodPingNodes, n)
+	}
+//	sort.Sort(tools.ByDelay(goodPingNodes))
+	for _, n := range goodPingNodes {
+		fmt.Println("avgDelay:", (*n).AvgDelay)
+	}
 
-	//go speedtest.XraySpeedTest(&wgSpeed, , sTimeout)
-	//fmt.Println(country, " ", DLSpeed, " ", ULSpeed)
+	var goodSpeedNodes []*tools.Node
+	var wgSpeed sync.WaitGroup
+	speedJob := make(chan *tools.Node, goodPingCnt)
+	speedResult := make(chan *tools.Node, goodPingCnt)
 
-	//time.Sleep(10*time.Second)
+	for i := 1; i <= 4; i++ {
+		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, sTimeout)
+	}
+	for _, n := range goodPingNodes {
+		speedJob <- n
+		wgSpeed.Add(1)
+	}
+	close(speedJob)
+	wgSpeed.Wait()
+	goodSpeeds := len(speedResult)
+	for i := 1; i <= goodSpeeds; i++ {
+		n := <-speedResult
+		goodSpeedNodes = append(goodSpeedNodes, n)
+		//fmt.Println((*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
+	}
+
+	sort.Sort(tools.ByDelay(goodSpeedNodes))
+	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
+	sort.Stable(tools.ByULSpeed(goodSpeedNodes))
+
+	for i, n := range goodSpeedNodes {
+		fmt.Println((*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
+		(*n).Id = strconv.Itoa(i)
+		(*n).CreateJson("jsons/")
+	}
 }
 

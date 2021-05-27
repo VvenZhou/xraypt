@@ -9,7 +9,6 @@ import(
 	"strings"
 	"syscall"
 	"strconv"
-	"fmt"
 	"encoding/json"
 	"io/ioutil"
 )
@@ -23,6 +22,21 @@ type Node struct {
 	DLSpeed float64
 	ULSpeed float64
 }
+
+type ByDLSpeed []*Node
+func (a ByDLSpeed) Len() int { return len(a) }
+func (a ByDLSpeed) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByDLSpeed) Less(i, j int) bool { return a[i].DLSpeed > a[j].DLSpeed } //actually this func should be More than
+
+type ByULSpeed []*Node
+func (a ByULSpeed) Len() int { return len(a) }
+func (a ByULSpeed) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByULSpeed) Less(i, j int) bool { return a[i].ULSpeed > a[j].ULSpeed } //actually this func should be More than
+
+type ByDelay []*Node
+func (a ByDelay) Len() int { return len(a) }
+func (a ByDelay) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
 type Xray struct{
 	Port int
@@ -47,12 +61,12 @@ func (n *Node) CreateJson(dirPath string) {
 
 	byteValue, err := json.MarshalIndent(con, "", "    ")
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }
 
@@ -74,7 +88,7 @@ func (x *Xray) Init(port int, jsonPath string) error {
 
 func (x *Xray) Run(randPort bool) error {
 	if randPort {
-		log.Println("randport")
+		//log.Println("randport")
 		x.randPort = true
 		x.Port, _ = GetFreePort()
 		s := []string{"temp/", "xrayRun_port_", strconv.Itoa(x.Port), ".json"}
@@ -97,9 +111,9 @@ func (x *Xray) Run(randPort bool) error {
 		log.Fatal(err)
 	}
 
-	log.Printf("xray executing, using json: %s\n", x.JsonPath)
+	//log.Printf("xray executing, using json: %s\n", x.JsonPath)
 	time.Sleep(500 * time.Millisecond)
-	log.Println("xray started!")
+	//log.Println("xray started!")
 	//go print(stdout)
 	return nil
 }
@@ -112,11 +126,11 @@ func (x *Xray) Stop() error {
 	//	log.Fatal(err)
 	//}
 
-	ps, err := x.cmd.Process.Wait()
+	_, err = x.cmd.Process.Wait()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(ps.Success())
+	//log.Println(ps.Success())
 
 	if x.randPort {
 		err = os.Remove(x.JsonPath)
@@ -124,25 +138,9 @@ func (x *Xray) Stop() error {
 			log.Fatal(err)
 		}
 	}
-	log.Println("xray stopped.")
+	//log.Println("xray stopped.")
 	return nil
 }
-
-//func RunXray(jsonPath string) (*exec.Cmd) {
-//	cmd := exec.Command("tools/xray", "-c", jsonPath)
-//	//stdout, _ := cmd.StdoutPipe()
-//
-//	err := cmd.Start()
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	log.Printf("xray executing, using json: %s\n", jsonPath)
-//	time.Sleep(500 * time.Millisecond)
-//	log.Println("xray started!")
-//	//go print(stdout)
-//	return cmd
-//}
 
 //func print(stdout io.ReadCloser) {
 //	for {
@@ -162,4 +160,17 @@ func GetFreePort() (port int, err error) {
 		}
 	}
 	return
+}
+
+func RemoveDuplicateStr(intSlice []string) []string {
+    keys := make(map[string]bool)
+    list := []string{}
+
+    for _, entry := range intSlice {
+        if _, value := keys[entry]; !value {
+            keys[entry] = true
+            list = append(list, entry)
+        }
+    }
+    return list
 }
