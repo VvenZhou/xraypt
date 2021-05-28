@@ -25,7 +25,7 @@ func SubGetVms(subs []string) []string {
 			log.Println("[ERROR]", "SubGet:", err)
 			continue
 		}
-		strs := strings.Split(data, "\n")
+		strs := strings.Fields(data)
 		for _, s := range strs {
 			if len(strings.Split(s, "vmess://")) == 2 {
 				vms = append(vms, s)

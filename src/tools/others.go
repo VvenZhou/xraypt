@@ -4,7 +4,7 @@ import(
 	"log"
 	"net"
 	"os/exec"
-	"os"
+	//"os"
 	"time"
 	"strings"
 	"syscall"
@@ -154,7 +154,7 @@ func (x *Xray) Stop() error {
 	//log.Println(ps.Success())
 
 	if x.randPort {
-		os.Remove(x.JsonPath)
+		//os.Remove(x.JsonPath)
 		//err = os.Remove(x.JsonPath)
 		//if err != nil {
 		//	log.Fatal(err)

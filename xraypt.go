@@ -17,14 +17,18 @@ import (
 const pTimeout = 1500 //ms
 const pCount = 5
 const sTimeout = 20000 //ms
-const threadPingCnt = 25
-const threadSpeedCnt = 8
+const threadPingCnt = 50
+const threadSpeedCnt = 4
 const DSLine = 5.0
 
 var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2"}
 var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
 
 func main() {
+	var vmLinks []string
+	vmLinks = tools.SubGetVms(subs)
+
+	//os.Exit(0)
 
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
@@ -35,8 +39,6 @@ func main() {
 		go ping.XrayPing(&wgPing, pingJob, pingResult, pCount, pTimeout)
 	}
 
-	var vmLinks []string
-	vmLinks = tools.SubGetVms(subs)
 	for _, s := range vmLinks {
 		pingJob <- s
 		wgPing.Add(1)
@@ -86,7 +88,9 @@ func main() {
 		fmt.Println((*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 		(*n).Id = strconv.Itoa(i)
 		(*n).CreateFinalJson("jsons/")
-		goodVmLinks = append(goodVmLinks, (*n).ShareLink)
+		str := []string{(*n).ShareLink, "\nDown: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country}
+		vmOutStr := strings.Join(str, "")
+		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}
 	if len(goodVmLinks) != 0 {
 		bytes := []byte(strings.Join(goodVmLinks[:], "\n\n"))
