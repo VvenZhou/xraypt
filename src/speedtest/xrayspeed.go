@@ -13,7 +13,7 @@ import (
 )
 
 
-func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, timeout int) {
+func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, timeout int, DSLine float64) {
 	for node := range jobs {
 		var x tools.Xray
 		x.Init(8124, node.JsonPath)
@@ -54,7 +54,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 				break
 			}
 			s.DownloadTest(false, myClient)
-			if s.DLSpeed < 10.0 {
+			if s.DLSpeed < DSLine {
 				log.Println("DownSpeed too slow, skipped.")
 				break
 			}

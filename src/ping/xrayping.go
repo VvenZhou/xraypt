@@ -1,7 +1,6 @@
 package ping
 
 import (
-	//"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -23,7 +22,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node,
 		var max int = 0
 
 		var n tools.Node
-		n.Init(strconv.Itoa(rand.Intn(99999)), vm)
+		n.Init(strconv.Itoa(rand.Intn(99999999)), vm)
 		n.CreateJson("temp/")
 
 		var x tools.Xray
