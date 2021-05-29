@@ -54,10 +54,10 @@ func (n *Node) Init(id string, shareLink string, port int) {
 }
 
 func (n *Node) CreateJson(dirPath string) {
-	var vmout VmessOut
+	var vmout Outbound
 	var con Config
 	VmLinkToVmOut(&vmout, n.ShareLink)
-	VmOutToConfig(&con, vmout)
+	OutToConfig(&con, vmout)
 
 	n.Con = &con
 
@@ -85,7 +85,7 @@ func (n *Node) CreateJson(dirPath string) {
 }
 
 func (n *Node) CreateFinalJson(dirPath string) {
-	VmConfigFinal(n.Con)
+	ConfigFinal(n.Con)
 
 	s := []string{dirPath, n.Id, ".json"}
 	n.JsonPath = strings.Join(s, "")

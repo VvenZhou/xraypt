@@ -14,18 +14,26 @@ import (
 	"os"
 )
 
-const pTimeout = 1500 //ms
-const pCount = 5
-const sTimeout = 10000 //ms
-const threadPingCnt = 25
-const threadSpeedCnt = 2
+const pTimeout = 2000 //ms
+const pCount = 8
+const sTimeout = 20000 //ms
+const threadPingCnt = 50
+const threadSpeedCnt = 4
 const DSLine = 5.0
 
 var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2"}
 var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
 var subA = []string{""}
 
+
 func main() {
+	//vless := []byte("vless://bdc07b5f-dd93-4c29-8fcf-25327ac2a55a@v2rayge1.free3333.xyz:443?encryption=none&security=tls&type=ws&host=v2rayge1.free3333.xyz&path=%2fray#https%3a%2f%2fgithub.com%2fAlvin9999%2fnew-pac%2fwiki%2bVLESS%e5%be%b7%e5%9b%bdi")
+	//var out tools.Outbound
+	//tools.VlLinkToOut(&out, string(vless))
+	////fmt.Printf("%+v\n", out)
+	//os.Exit(0)
+
+
 	//var nodes []tools.Node
 	var ports []int
 	var vmLinks []string
@@ -86,8 +94,10 @@ func main() {
 	for i := 1; i <= goodSpeeds; i++ {
 		n := <-speedResult
 		if (*n).DLSpeed > 5.0 {
+			log.Println("Speed got one!")
 			goodSpeedNodes = append(goodSpeedNodes, n)
 		}
+		log.Println("DownSpeed too slow, abandoned")
 	}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
@@ -104,7 +114,7 @@ func main() {
 		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}
 	if len(goodVmLinks) != 0 {
-		bytes := []byte(strings.Join(goodVmLinks[:], "\n\n"))
+		bytes := []byte(strings.Join(goodVmLinks[:], "\n"))
 		err := os.WriteFile("vmOut.txt", bytes, 0644)
 		if err != nil {
 			log.Println(err)

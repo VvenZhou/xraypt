@@ -49,7 +49,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			log.Fatal(err)
 		}
 
-		if fail >= 4 {
+		if fail >= (count)/2 {
 			//fmt.Println("None")
 			//return 0, errors.New("Ping not accessable")
 		}else{
@@ -79,8 +79,10 @@ func Ping(port int, timeout int) (int, error){
 	code := resp.StatusCode
 
 	defer resp.Body.Close()
-	if code != 204 {
-		log.Println("code is", code, "instead of 204")
+	if code >= 399 {
+		if code != 503 {
+			log.Println("code is", code, "instead of 204")
+		}
 		return 0, errors.New("Ping err: StatusCode is not 204")
 	}
 

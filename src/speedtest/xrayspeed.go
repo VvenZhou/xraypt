@@ -15,6 +15,7 @@ import (
 
 func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, timeout int, DSLine float64) {
 	for node := range jobs {
+		log.Println("Speed: start testing!")
 		var x tools.Xray
 		x.Init((*node).Port, (*node).JsonPath)
 		x.Run()
@@ -48,7 +49,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		}
 
 		for _, s := range targets {
-			//s.PingTest(myClient)
+			s.PingTest(myClient)
 			//if s.Country == "China" {
 			//	log.Println("Speed Skipped for China.")
 			//	break
@@ -59,7 +60,6 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 			//	break
 			//}
 			s.UploadTest(false, myClient)
-			log.Println("Speed got one!")
 
 			(*node).Country = s.Country
 			(*node).DLSpeed = math.Round(s.DLSpeed*100)/100
@@ -70,5 +70,6 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		x.Stop()
 		wg.Done()
 		//return "", 0.0, 0.0
+		log.Println("Speed: testing finished!")
 	}
 }

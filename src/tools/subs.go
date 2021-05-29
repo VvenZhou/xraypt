@@ -28,7 +28,7 @@ func SubGetVms(subs []string) []string {
 	}
 
 	for _, sub := range subs {
-		data, err := subGetStr(sub)
+		data, err := subLinkGetStr(sub)
 		if err != nil {
 			log.Println("[ERROR]", "SubGet:", err)
 			continue
@@ -102,7 +102,7 @@ func subGetYousVms() []string {
 	for _, vm := range vmStrStr {
 		vmes = append(vmes, vm[1])
 	}
-	log.Println("YouNeedWind get ", len(vmes), "vmesses.")
+	log.Println("YouNeedWind get", len(vmes), "vmesses.")
 	return vmes
 }
 
@@ -157,10 +157,11 @@ func subGetFreefqVms() []string{
 	for _, list := range strStr{
 		vms = append(vms, list[1])
 	}
+	log.Println("Freefq get", len(vms), "vmesses.")
 	return vms
 }
 
-func subGetStr(subLink string) (string, error) {
+func subLinkGetStr(subLink string) (string, error) {
 	var t time.Duration = time.Duration(10000) * time.Millisecond
 	port := 8123
 	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
