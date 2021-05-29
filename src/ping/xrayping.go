@@ -9,28 +9,24 @@ import (
 	"time"
 	"errors"
 	"sync"
-	"math/rand"
+	//"math/rand"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node, count int, timeout int) {
-	for vm := range jobs {
+func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, count int, timeout int) {
+	for n := range jobs {
 		var totalDelay int = 0
 		var avgDelay int = 0
 		var fail int = 0
 		var max int = 0
 
-		var n tools.Node
-		n.Init(strconv.Itoa(rand.Intn(99999999)), vm)
-		n.CreateJson("temp/")
-
 		var x tools.Xray
-		err := x.Init(8124, n.JsonPath)
+		err := x.Init((*n).Port, (*n).JsonPath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = x.Run(true)
+		err = x.Run()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -61,8 +57,8 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan string, result chan<- *tools.Node,
 			log.Println("ping got one!")
 			//fmt.Printf("avgDelay: %d\n", avgDelay)
 			//return avgDelay, nil
-			n.AvgDelay = avgDelay
-			result <- &n
+			(*n).AvgDelay = avgDelay
+			result <- n
 		}
 		wg.Done()
 	}
@@ -84,7 +80,7 @@ func Ping(port int, timeout int) (int, error){
 
 	defer resp.Body.Close()
 	if code != 204 {
-		log.Println("code is ", code, " instead of 204")
+		log.Println("code is", code, "instead of 204")
 		return 0, errors.New("Ping err: StatusCode is not 204")
 	}
 

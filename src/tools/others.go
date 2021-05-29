@@ -8,7 +8,7 @@ import(
 	"time"
 	"strings"
 	"syscall"
-	"strconv"
+	//"strconv"
 	"encoding/json"
 	"io/ioutil"
 )
@@ -21,8 +21,14 @@ type Node struct {
 	Country string
 	DLSpeed float64
 	ULSpeed float64
-
+	Port int
 	Con *Config
+}
+
+type Xray struct{
+	Port int
+	JsonPath string
+	cmd *exec.Cmd
 }
 
 type ByDLSpeed []*Node
@@ -40,16 +46,11 @@ func (a ByDelay) Len() int { return len(a) }
 func (a ByDelay) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
-type Xray struct{
-	Port int
-	JsonPath string
-	randPort bool
-	cmd *exec.Cmd
-}
 
-func (n *Node) Init(id string, shareLink string) {
+func (n *Node) Init(id string, shareLink string, port int) {
 	n.Id = id
 	n.ShareLink = shareLink
+	n.Port = port
 }
 
 func (n *Node) CreateJson(dirPath string) {
@@ -60,7 +61,11 @@ func (n *Node) CreateJson(dirPath string) {
 
 	n.Con = &con
 
-	s := []string{dirPath, n.Id, ".json"}
+	out, err := exec.Command("uuidgen").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	s := []string{dirPath, strings.TrimSpace(string(out)), ".json"}
 	n.JsonPath = strings.Join(s, "")
 
 	byteValue, err := json.MarshalIndent(con, "", "    ")
@@ -69,6 +74,11 @@ func (n *Node) CreateJson(dirPath string) {
 	}
 
 	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = JsonChangePort(n.JsonPath, n.JsonPath, n.Port)
 	if err != nil {
 		log.Println(err)
 	}
@@ -89,38 +99,43 @@ func (n *Node) CreateFinalJson(dirPath string) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	err = JsonChangePort(n.JsonPath, n.JsonPath, 8123)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (x *Xray) Init(port int, jsonPath string) error {
 	x.Port = port
 	x.JsonPath = jsonPath
-	x.randPort = false
+	//x.randPort = false
 
-	return nil
-
-	//s := []string{"/tmp/tmp_", jsonPath}
+	//s := []string{"temp/xrayRun_port_", strconv.Itoa(x.Port), ".json"}
 	//x.JsonPath = strings.Join(s, "")
-	//err := JsonChangePort(jsonPath, x.JsonPath, x.Port)
+	//err := JsonChangePort(jsonPath, jsonPath, x.Port)
 	//if err != nil {
 	//	return err
 	//}
-	//return nil
+	return nil
 }
 
-func (x *Xray) Run(randPort bool) error {
-	if randPort {
-		//log.Println("randport")
-		x.randPort = true
-		x.Port, _ = GetFreePort()
-		s := []string{"temp/", "xrayRun_port_", strconv.Itoa(x.Port), ".json"}
+func (x *Xray) Run() error {
+	//if randPort {
+	//	//log.Println("randport")
+	//	x.randPort = true
+	//	x.Port, _ = GetFreePort()
+	//	s := []string{"temp/", "xrayRun_port_", strconv.Itoa(x.Port), ".json"}
 
-		path := strings.Join(s, "")
-		err := JsonChangePort(x.JsonPath, path, x.Port)
-		if err != nil {
-			return err
-		}
-		x.JsonPath = path
-	}
+	//	path := strings.Join(s, "")
+	//	err := JsonChangePort(x.JsonPath, path, x.Port)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	x.JsonPath = path
+	//}
+
+	//log.Println("runnning Xray: ", x.JsonPath, " at ", x.Port)
 	x.cmd = exec.Command("tools/xray", "-c", x.JsonPath)
 	x.cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGTERM,
@@ -153,13 +168,13 @@ func (x *Xray) Stop() error {
 	}
 	//log.Println(ps.Success())
 
-	if x.randPort {
-		//os.Remove(x.JsonPath)
-		//err = os.Remove(x.JsonPath)
-		//if err != nil {
-		//	log.Fatal(err)
-		//}
-	}
+	//if x.randPort {
+	//	//os.Remove(x.JsonPath)
+	//	//err = os.Remove(x.JsonPath)
+	//	//if err != nil {
+	//	//	log.Fatal(err)
+	//	//}
+	//}
 
 	//log.Println("xray stopped.")
 	return nil
@@ -173,16 +188,34 @@ func (x *Xray) Stop() error {
 //	}
 //}
 
-func GetFreePort() (port int, err error) {
-	var a *net.TCPAddr
-	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
-		var l *net.TCPListener
-		if l, err = net.ListenTCP("tcp", a); err == nil {
-			defer l.Close()
-			return l.Addr().(*net.TCPAddr).Port, nil
+//func GetFreePort() (port int, err error) {
+//	var a *net.TCPAddr
+//	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
+//		var l *net.TCPListener
+//		if l, err = net.ListenTCP("tcp", a); err == nil {
+//			defer l.Close()
+//			return l.Addr().(*net.TCPAddr).Port, nil
+//		}
+//	}
+//	return
+//}
+
+func GetFreePorts(count int) ([]int, error) {
+	var ports []int
+	for i := 0; i < count; i++ {
+		addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+		if err != nil {
+			return nil, err
 		}
+
+		l, err := net.ListenTCP("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+		defer l.Close()
+		ports = append(ports, l.Addr().(*net.TCPAddr).Port)
 	}
-	return
+	return ports, nil
 }
 
 func RemoveDuplicateStr(intSlice []string) []string {
