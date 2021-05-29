@@ -16,32 +16,41 @@ import (
 
 const pTimeout = 1500 //ms
 const pCount = 5
-const sTimeout = 20000 //ms
-const threadPingCnt = 50
-const threadSpeedCnt = 4
+const sTimeout = 10000 //ms
+const threadPingCnt = 25
+const threadSpeedCnt = 2
 const DSLine = 5.0
 
 var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2"}
 var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
+var subA = []string{""}
 
 func main() {
+	//var nodes []tools.Node
+	var ports []int
 	var vmLinks []string
-	vmLinks = tools.SubGetVms(subs)
+	vmLinks = tools.SubGetVms(subA)
+	ports, err := tools.GetFreePorts(len(vmLinks))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	//os.Exit(0)
 
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
-	pingJob := make(chan string, 500)
+	pingJob := make(chan *tools.Node, 500)
 	pingResult := make(chan *tools.Node, 500)
 
+	for i, s := range vmLinks {
+		var n tools.Node
+		n.Init(strconv.Itoa(i), s, ports[i])
+		n.CreateJson("temp/")
+
+		pingJob <- &n
+		wgPing.Add(1)
+	}
 	for i := 1; i <= threadPingCnt; i++ {
 		go ping.XrayPing(&wgPing, pingJob, pingResult, pCount, pTimeout)
-	}
-
-	for _, s := range vmLinks {
-		pingJob <- s
-		wgPing.Add(1)
 	}
 	close(pingJob)
 
@@ -64,19 +73,21 @@ func main() {
 	speedJob := make(chan *tools.Node, goodPingCnt)
 	speedResult := make(chan *tools.Node, goodPingCnt)
 
-	for i := 1; i <= threadSpeedCnt; i++ {
-		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, sTimeout, DSLine)
-	}
 	for _, n := range goodPingNodes {
 		speedJob <- n
 		wgSpeed.Add(1)
+	}
+	for i := 1; i <= threadSpeedCnt; i++ {
+		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, sTimeout, DSLine)
 	}
 	close(speedJob)
 	wgSpeed.Wait()
 	goodSpeeds := len(speedResult)
 	for i := 1; i <= goodSpeeds; i++ {
 		n := <-speedResult
-		goodSpeedNodes = append(goodSpeedNodes, n)
+		if (*n).DLSpeed > 5.0 {
+			goodSpeedNodes = append(goodSpeedNodes, n)
+		}
 	}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))

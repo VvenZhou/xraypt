@@ -11,14 +11,22 @@ import (
 	"strings"
 	"time"
 	"regexp"
+	"github.com/antchfx/htmlquery"
 )
 
 func SubGetVms(subs []string) []string {
 	var vms []string
+
 	yousVms := subGetYousVms()
 	for _, vm := range yousVms {
-		vms = append(vms, vm)
+		vms = append(vms, strings.TrimSpace(vm))
 	}
+
+	freefqVms := subGetFreefqVms()
+	for _, vm := range freefqVms {
+		vms = append(vms, strings.TrimSpace(vm))
+	}
+
 	for _, sub := range subs {
 		data, err := subGetStr(sub)
 		if err != nil {
@@ -27,11 +35,12 @@ func SubGetVms(subs []string) []string {
 		}
 		strs := strings.Fields(data)
 		for _, s := range strs {
-			if len(strings.Split(s, "vmess://")) == 2 {
-				vms = append(vms, s)
+			if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
+				vms = append(vms, strings.TrimSpace(s))
 			}
 		}
 	}
+
 	log.Println("length of vms", len(vms))
 	vmsNoDu := RemoveDuplicateStr(vms)
 	log.Println("length of vmsNoDu", len(vms))
@@ -39,7 +48,7 @@ func SubGetVms(subs []string) []string {
 }
 
 func subGetYousVms() []string {
-	var t time.Duration = time.Duration(8000) * time.Millisecond
+	var t time.Duration = time.Duration(10000) * time.Millisecond
 	str := []string{"http://127.0.0.1", strconv.Itoa(8123)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
@@ -93,12 +102,66 @@ func subGetYousVms() []string {
 	for _, vm := range vmStrStr {
 		vmes = append(vmes, vm[1])
 	}
-	log.Println("YouNeedWind vmesses get!")
+	log.Println("YouNeedWind get ", len(vmes), "vmesses.")
 	return vmes
 }
 
+func subGetFreefqVms() []string{
+	var t time.Duration = time.Duration(10000) * time.Millisecond
+	subLink := "https://www.freefq.com/v2ray/"
+	port := 8123
+	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
+	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
+	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
+	resp, err := myClient.Get(subLink)
+	if err != nil {
+		log.Println("fetch error!")
+		return []string{}
+	}
+	defer resp.Body.Close()
+	contents, _ := ioutil.ReadAll(resp.Body)
+
+	//doc, err := htmlquery.LoadURL("http://example.com/")
+	doc, err := htmlquery.Parse(strings.NewReader(string(contents)))
+	a := htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/ul[1]/li[1]/a")
+	h2Tail := htmlquery.SelectAttr(a, "href")
+	log.Printf("%s\n", h2Tail)
+
+	s := []string{"https://www.freefq.com", h2Tail}
+	h2 := strings.Join(s, "")
+	log.Printf("%s\n", h2)
+	resp2, err := myClient.Get(h2)
+	if err != nil {
+		log.Println("fetch h2 error!")
+		return []string{}
+	}
+	defer resp2.Body.Close()
+	contents, _ = ioutil.ReadAll(resp2.Body)
+	doc, err = htmlquery.Parse(strings.NewReader(string(contents)))
+	a = htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/table[2]/tbody/tr/td/div/fieldset/table/tbody/tr/td/a")
+	h3 := htmlquery.SelectAttr(a, "href")
+	log.Printf("%s\n", h3)
+
+	resp3, err := myClient.Get(h3)
+	if err != nil {
+		log.Println("fetch h2 error!")
+		return []string{}
+	}
+	defer resp3.Body.Close()
+	contents, _ = ioutil.ReadAll(resp3.Body)
+	//fmt.Printf("%s\n", string(contents))
+
+	var vms []string
+	vmRe := regexp.MustCompile(`(vmess://.*)<br>`)
+	strStr := vmRe.FindAllStringSubmatch(string(contents), -1)
+	for _, list := range strStr{
+		vms = append(vms, list[1])
+	}
+	return vms
+}
+
 func subGetStr(subLink string) (string, error) {
-	var t time.Duration = time.Duration(5000) * time.Millisecond
+	var t time.Duration = time.Duration(10000) * time.Millisecond
 	port := 8123
 	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
@@ -111,7 +174,6 @@ func subGetStr(subLink string) (string, error) {
 	defer resp.Body.Close()
 	contents, _ := ioutil.ReadAll(resp.Body)
 	log.Println("SubString got!")
-	//return string(contents)
 
 	data, err := base64.StdEncoding.DecodeString(string(contents))
 	if err != nil {
