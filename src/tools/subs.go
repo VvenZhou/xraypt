@@ -43,7 +43,7 @@ func SubGetVms(subs []string) []string {
 
 	log.Println("length of vms", len(vms))
 	vmsNoDu := RemoveDuplicateStr(vms)
-	log.Println("length of vmsNoDu", len(vms))
+	log.Println("length of vmsNoDu", len(vmsNoDu))
 	return vmsNoDu
 }
 

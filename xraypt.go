@@ -29,7 +29,7 @@ func main() {
 	//var nodes []tools.Node
 	var ports []int
 	var vmLinks []string
-	vmLinks = tools.SubGetVms(subA)
+	vmLinks = tools.SubGetVms(subs)
 	ports, err := tools.GetFreePorts(len(vmLinks))
 	if err != nil {
 		log.Fatal(err)
