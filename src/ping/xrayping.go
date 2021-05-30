@@ -13,12 +13,12 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, count int, timeout time.Duration) {
+func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, pCount int, pTimeout time.Duration, pRealCount int, pRealTimeout time.Duration) {
 	for n := range jobs {
-		var totalDelay int = 0
-		var avgDelay int = 0
+		//var totalDelay int = 0
+		//var avgDelay int = 0
 		var fail int = 0
-		var max int = 0
+		//var max int = 0
 
 		var x tools.Xray
 		err := x.Init((*n).Port, (*n).JsonPath)
@@ -30,16 +30,30 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			log.Fatal(err)
 		}
 
-		for i := 0; i < count; i++ {
-			delay, err := Ping(x.Port, timeout)
+		str := []string{"http://127.0.0.1", strconv.Itoa(x.Port)}
+		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
+		pClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: pTimeout}
+		pRealClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: pRealTimeout}
+
+		for i := 0; i < pCount; i++ {
+			_, _, err := Ping(pClient, "https://www.google.com/gen_204")
 			if err != nil {
 				fail += 1
-				//log.Println(err)
-			}else{
-				if max < delay {
-					max = delay
+			}
+		}
+
+		if !(fail >= (pCount-1)/4) {
+			for i := 0; i < pRealCount; i++{
+				delay, code, err := Ping(pRealClient, "https://www.google.com/ncr")
+				if err != nil && code != 429{
+					log.Println("PingReal fail", i + 1, "times,", "error:", err)
+					time.Sleep(1000*time.Millisecond)
+				}else{
+					(*n).AvgDelay = delay
+					log.Println("ping got one!", "delay:", delay)
+					result <- n
+					break
 				}
-				totalDelay += delay
 			}
 		}
 
@@ -47,46 +61,28 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		if fail >= (count-1)*1/4 {
-			//fmt.Println("None")
-			//return 0, errors.New("Ping not accessable")
-		}else{
-			avgDelay = (totalDelay-max)/(count-fail-1)
-			log.Println("ping got one!")
-			//fmt.Printf("avgDelay: %d\n", avgDelay)
-			//return avgDelay, nil
-			(*n).AvgDelay = avgDelay
-			result <- n
-		}
 		wg.Done()
 	}
 }
 
-func Ping(port int, timeout time.Duration) (int, error){
-	//var t time.Duration = time.Duration(timeout) * time.Millisecond
-	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
-	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
-
+func Ping(myClient *http.Client, url string) (int, int, error){
 	start := time.Now()
-	resp, err := myClient.Get("http://www.google.com/gen_204")
+	resp, err := myClient.Get(url)
 	stop := time.Now()
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	code := resp.StatusCode
 
 	defer resp.Body.Close()
-	if code >= 399 {
-		if code != 503 {
-			log.Println("code is", code, "instead of 204")
-		}
-		return 0, errors.New("Ping err: StatusCode is not 204")
+	if code >= 399 && code != 429{
+		//if code != 503 {
+			//log.Println("code is", code, "instead of 204,")
+		//}
+		return 0, code,  errors.New("Ping err: StatusCode is not 204 or 429")
 	}
 
 	elapsed := stop.Sub(start)
 	delay := elapsed.Milliseconds()
-	return int(delay), nil
+	return int(delay), code,  nil
 }
-

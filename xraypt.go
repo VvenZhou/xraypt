@@ -15,14 +15,19 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-const pT = 1500 //ms
 const pCount = 9
+const pT = 1500 //ms
+const pRealCount = 3
+const pRealT = 2000 //ms
+
 const sT = 20000 //ms
-const threadPingCnt = 100
+
+const threadPingCnt = 50
 const threadSpeedCnt = 4
 const DSLine = 5.0
 
 const pTimeout = time.Duration(pT) * time.Millisecond
+const pRealTimeout = time.Duration(pRealT) * time.Millisecond
 const sTimeout = time.Duration(sT) * time.Millisecond
 
 
@@ -66,7 +71,7 @@ func main() {
 		wgPing.Add(1)
 	}
 	for i := 1; i <= threadPingCnt; i++ {
-		go ping.XrayPing(&wgPing, pingJob, pingResult, pCount, pTimeout)
+		go ping.XrayPing(&wgPing, pingJob, pingResult, pCount, pTimeout, pRealCount, pRealTimeout)
 	}
 	close(pingJob)
 
