@@ -17,6 +17,11 @@ import (
 func SubGetVms(subs []string) []string {
 	var vms []string
 
+	vmOutVms := subGetVmFromVmOut()
+	for _, vm := range vmOutVms {
+		vms = append(vms, vm)
+	}
+
 	yousVms := subGetYousVms()
 	for _, vm := range yousVms {
 		vms = append(vms, strings.TrimSpace(vm))
@@ -183,3 +188,18 @@ func subLinkGetStr(subLink string) (string, error) {
 	return string(data), nil
 }
 
+func subGetVmFromVmOut () []string{
+	content, err := ioutil.ReadFile("vmOut.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var vms []string
+	strs := strings.Split(string(content), "\n")
+	for _, s := range strs {
+		if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
+			vms = append(vms, strings.TrimSpace(s))
+		}
+	}
+	log.Println("Get VmOut", len(vms), "vmesses.")
+	return vms
+}

@@ -15,19 +15,19 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-const pCount = 9
-const pT = 1500 //ms
+const pCount = 5
+const pT = 1000 //ms
 const pRealCount = 3
-const pRealT = 2000 //ms
+const pRealT = 1000 //ms
 
 const sT = 20000 //ms
 
-const threadPingCnt = 50
-const threadSpeedCnt = 4
+const threadPingCnt = 150
+const threadSpeedCnt = 3
 const DSLine = 5.0
 
-const pTimeout = time.Duration(pT) * time.Millisecond
-const pRealTimeout = time.Duration(pRealT) * time.Millisecond
+const pTimeout = time.Duration(pT*2) * time.Millisecond
+const pRealTimeout = time.Duration(pRealT*2) * time.Millisecond
 const sTimeout = time.Duration(sT) * time.Millisecond
 
 
@@ -55,7 +55,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup

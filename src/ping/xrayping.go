@@ -44,7 +44,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 
 		if !(fail >= (pCount-1)/4) {
 			for i := 0; i < pRealCount; i++{
-				delay, code, err := Ping(pRealClient, "https://www.google.com/ncr")
+				delay, code, err := Ping(pRealClient, "https://www.google.com")
 				if err != nil && code != 429{
 					log.Println("PingReal fail", i + 1, "times,", "error:", err)
 					time.Sleep(1000*time.Millisecond)
@@ -83,6 +83,6 @@ func Ping(myClient *http.Client, url string) (int, int, error){
 	}
 
 	elapsed := stop.Sub(start)
-	delay := elapsed.Milliseconds()
+	delay := elapsed.Milliseconds()/2
 	return int(delay), code,  nil
 }
