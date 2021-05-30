@@ -9,12 +9,11 @@ import (
 	"time"
 	"errors"
 	"sync"
-	//"math/rand"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, count int, timeout int) {
+func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, count int, timeout time.Duration) {
 	for n := range jobs {
 		var totalDelay int = 0
 		var avgDelay int = 0
@@ -49,7 +48,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			log.Fatal(err)
 		}
 
-		if fail >= (count)/2 {
+		if fail >= (count-1)*1/4 {
 			//fmt.Println("None")
 			//return 0, errors.New("Ping not accessable")
 		}else{
@@ -64,11 +63,11 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 	}
 }
 
-func Ping(port int, timeout int) (int, error){
-	var t time.Duration = time.Duration(timeout) * time.Millisecond
+func Ping(port int, timeout time.Duration) (int, error){
+	//var t time.Duration = time.Duration(timeout) * time.Millisecond
 	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
+	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
 
 	start := time.Now()
 	resp, err := myClient.Get("http://www.google.com/gen_204")

@@ -4,11 +4,9 @@ import(
 	"log"
 	"net"
 	"os/exec"
-	//"os"
 	"time"
 	"strings"
 	"syscall"
-	//"strconv"
 	"encoding/json"
 	"io/ioutil"
 )
@@ -84,10 +82,11 @@ func (n *Node) CreateJson(dirPath string) {
 	}
 }
 
-func (n *Node) CreateFinalJson(dirPath string) {
+func (n *Node) CreateFinalJson(dirPath string, name string) {
 	ConfigFinal(n.Con)
 
-	s := []string{dirPath, n.Id, ".json"}
+	//s := []string{dirPath, n.Id, ".json"}
+	s := []string{dirPath, name, ".json"}
 	n.JsonPath = strings.Join(s, "")
 
 	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
@@ -186,18 +185,6 @@ func (x *Xray) Stop() error {
 //		line, _, _ := r.ReadLine()
 //		fmt.Println(string(line))
 //	}
-//}
-
-//func GetFreePort() (port int, err error) {
-//	var a *net.TCPAddr
-//	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
-//		var l *net.TCPListener
-//		if l, err = net.ListenTCP("tcp", a); err == nil {
-//			defer l.Close()
-//			return l.Addr().(*net.TCPAddr).Port, nil
-//		}
-//	}
-//	return
 //}
 
 func GetFreePorts(count int) ([]int, error) {

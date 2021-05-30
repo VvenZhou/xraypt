@@ -3,23 +3,28 @@ package main
 import (
 	"fmt"
 	"log"
-	"github.com/VvenZhou/xraypt/src/ping"
-	"github.com/VvenZhou/xraypt/src/speedtest"
-	"github.com/VvenZhou/xraypt/src/tools"
-	//"time"
 	"sync"
 	"sort"
 	"strconv"
 	"strings"
 	"os"
+	"time"
+
+	"github.com/VvenZhou/xraypt/src/ping"
+	"github.com/VvenZhou/xraypt/src/speedtest"
+	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-const pTimeout = 2000 //ms
-const pCount = 8
-const sTimeout = 20000 //ms
-const threadPingCnt = 50
+const pT = 1500 //ms
+const pCount = 9
+const sT = 20000 //ms
+const threadPingCnt = 100
 const threadSpeedCnt = 4
 const DSLine = 5.0
+
+const pTimeout = time.Duration(pT) * time.Millisecond
+const sTimeout = time.Duration(sT) * time.Millisecond
+
 
 var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2"}
 var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
@@ -27,6 +32,9 @@ var subA = []string{""}
 
 
 func main() {
+
+	os.RemoveAll("jit/")
+	os.MkdirAll("jit/", 0755)
 	//vless := []byte("vless://bdc07b5f-dd93-4c29-8fcf-25327ac2a55a@v2rayge1.free3333.xyz:443?encryption=none&security=tls&type=ws&host=v2rayge1.free3333.xyz&path=%2fray#https%3a%2f%2fgithub.com%2fAlvin9999%2fnew-pac%2fwiki%2bVLESS%e5%be%b7%e5%9b%bdi")
 	//var out tools.Outbound
 	//tools.VlLinkToOut(&out, string(vless))
@@ -107,8 +115,8 @@ func main() {
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {
 		fmt.Println((*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
-		(*n).Id = strconv.Itoa(i)
-		(*n).CreateFinalJson("jsons/")
+		//(*n).Id = strconv.Itoa(i)
+		(*n).CreateFinalJson("jsons/", strconv.Itoa(i))
 		str := []string{(*n).ShareLink, "\nDown: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country}
 		vmOutStr := strings.Join(str, "")
 		goodVmLinks = append(goodVmLinks, vmOutStr)

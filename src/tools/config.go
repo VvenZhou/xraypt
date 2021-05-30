@@ -120,7 +120,10 @@ func ConfigFinal(con *Config) {
 
 	(*con).Dns.Servers = []interface{}{ s1, s2, s3, "localhost"}
 	(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{r1, r2, r3}
-	(*con).Outbounds = append((*con).Outbounds, o1, o2)
+
+	preCon := (*con).Outbounds[0]
+	//(*con).Outbounds = append((*con).Outbounds, o1, o2)
+	(*con).Outbounds = []interface{}{ preCon, o1, o2}
 }
 
 func OutToConfig(con *Config, vmOut Outbound ) {
