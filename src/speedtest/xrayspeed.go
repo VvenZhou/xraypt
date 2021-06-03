@@ -21,7 +21,6 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		x.Init((*node).Port, (*node).JsonPath)
 		x.Run()
 
-		//var t time.Duration = time.Duration(timeout) * time.Millisecond
 		str := []string{"http://127.0.0.1", strconv.Itoa(x.Port)}
 		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 		myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
@@ -54,6 +53,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 				break
 			}
 			s.PingTest(myClient)
+			//log.Println(s.Latency.Milliseconds())
 			//if s.Country == "China" {
 			//	log.Println("Speed Skipped for China.")
 			//	break

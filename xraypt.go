@@ -15,15 +15,15 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-const pCount = 5
-const pT = 1000 //ms
-const pRealCount = 3
+const pCount = 7
+const pT = 750 //ms
+const pRealCount = 2
 const pRealT = 1000 //ms
 
 const sT = 20000 //ms
 
-const threadPingCnt = 150
-const threadSpeedCnt = 3
+const threadPingCnt = 100
+const threadSpeedCnt = 2
 const DSLine = 5.0
 
 const pTimeout = time.Duration(pT*2) * time.Millisecond
@@ -113,8 +113,8 @@ func main() {
 	}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
-	sort.Stable(tools.ByDelay(goodSpeedNodes))
 	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
+	sort.Stable(tools.ByDelay(goodSpeedNodes))
 
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {

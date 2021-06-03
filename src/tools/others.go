@@ -147,7 +147,7 @@ func (x *Xray) Run() error {
 	}
 
 	//log.Printf("xray executing, using json: %s\n", x.JsonPath)
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(750 * time.Millisecond)
 	//log.Println("xray started!")
 	//go print(stdout)
 	return nil

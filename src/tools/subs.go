@@ -40,8 +40,8 @@ func SubGetVms(subs []string) []string {
 		}
 		strs := strings.Fields(data)
 		for _, s := range strs {
-			if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
-				vms = append(vms, strings.TrimSpace(s))
+			if len(strings.Split(s, "vmess://")) == 2 {
+				vms = append(vms, s)
 			}
 		}
 	}

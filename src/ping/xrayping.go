@@ -42,7 +42,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			}
 		}
 
-		if !(fail >= (pCount-1)/4) {
+		if !(fail >= (pCount+1)/2) {
 			for i := 0; i < pRealCount; i++{
 				delay, code, err := Ping(pRealClient, "https://www.google.com")
 				if err != nil && code != 429{
