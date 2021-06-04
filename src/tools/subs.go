@@ -54,7 +54,7 @@ func SubGetVms(subs []string) []string {
 
 func subGetYousVms() []string {
 	var t time.Duration = time.Duration(10000) * time.Millisecond
-	str := []string{"http://127.0.0.1", strconv.Itoa(8123)}
+	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
 
@@ -114,8 +114,7 @@ func subGetYousVms() []string {
 func subGetFreefqVms() []string{
 	var t time.Duration = time.Duration(10000) * time.Millisecond
 	subLink := "https://www.freefq.com/v2ray/"
-	port := 8123
-	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
+	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
 	resp, err := myClient.Get(subLink)
@@ -168,8 +167,7 @@ func subGetFreefqVms() []string{
 
 func subLinkGetStr(subLink string) (string, error) {
 	var t time.Duration = time.Duration(10000) * time.Millisecond
-	port := 8123
-	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
+	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
 

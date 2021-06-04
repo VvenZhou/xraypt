@@ -67,7 +67,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 			if s.DLSpeed >= 10 {
 				s := []string{ s.Country, "_", strconv.Itoa(int(s.Latency.Milliseconds())), "_", strconv.FormatFloat(s.DLSpeed, 'f', 4, 64)}
 				name := strings.Join(s, "")
-				(*node).CreateFinalJson("jit/", name)
+				(*node).CreateFinalJson(tools.JitPath, name)
 			}
 
 			(*node).Country = s.Country

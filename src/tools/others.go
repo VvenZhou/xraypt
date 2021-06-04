@@ -135,7 +135,7 @@ func (x *Xray) Run() error {
 	//}
 
 	//log.Println("runnning Xray: ", x.JsonPath, " at ", x.Port)
-	x.cmd = exec.Command("tools/xray", "-c", x.JsonPath)
+	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
 	x.cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGTERM,
 	}
