@@ -1,49 +1,53 @@
 package tools
 
-import(
+import (
+	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net"
 	"os/exec"
-	"time"
 	"strings"
 	"syscall"
-	"encoding/json"
-	"io/ioutil"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type Node struct {
-	Id string
+	Id        string
 	ShareLink string
-	JsonPath string
-	AvgDelay int
-	Country string
-	DLSpeed float64
-	ULSpeed float64
-	Port int
-	Con *Config
+	JsonPath  string
+	AvgDelay  int
+	Country   string
+	DLSpeed   float64
+	ULSpeed   float64
+	Port      int
+	Con       *Config
 }
 
-type Xray struct{
-	Port int
+type Xray struct {
+	Port     int
 	JsonPath string
-	cmd *exec.Cmd
+	cmd      *exec.Cmd
 }
 
 type ByDLSpeed []*Node
-func (a ByDLSpeed) Len() int { return len(a) }
-func (a ByDLSpeed) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+func (a ByDLSpeed) Len() int           { return len(a) }
+func (a ByDLSpeed) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDLSpeed) Less(i, j int) bool { return a[i].DLSpeed > a[j].DLSpeed } //actually this func should be More than
 
 type ByULSpeed []*Node
-func (a ByULSpeed) Len() int { return len(a) }
-func (a ByULSpeed) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+func (a ByULSpeed) Len() int           { return len(a) }
+func (a ByULSpeed) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByULSpeed) Less(i, j int) bool { return a[i].ULSpeed > a[j].ULSpeed } //actually this func should be More than
 
 type ByDelay []*Node
-func (a ByDelay) Len() int { return len(a) }
-func (a ByDelay) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
+func (a ByDelay) Len() int           { return len(a) }
+func (a ByDelay) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
 func (n *Node) Init(id string, shareLink string, port int) {
 	n.Id = id
@@ -59,10 +63,11 @@ func (n *Node) CreateJson(dirPath string) {
 
 	n.Con = &con
 
-	out, err := exec.Command("uuidgen").Output()
-	if err != nil {
-		log.Fatal(err)
-	}
+	//out, err := exec.Command("uuidgen").Output()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	out := uuid.New().String()
 	s := []string{dirPath, strings.TrimSpace(string(out)), ".json"}
 	n.JsonPath = strings.Join(s, "")
 
@@ -136,9 +141,9 @@ func (x *Xray) Run() error {
 
 	//log.Println("runnning Xray: ", x.JsonPath, " at ", x.Port)
 	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
-	x.cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGTERM,
-	}
+	//x.cmd.SysProcAttr = &syscall.SysProcAttr{
+	//	Pdeathsig: syscall.SIGTERM,
+	//}
 	//stdout, _ := cmd.StdoutPipe()
 
 	err := x.cmd.Start()
@@ -206,15 +211,14 @@ func GetFreePorts(count int) ([]int, error) {
 }
 
 func RemoveDuplicateStr(intSlice []string) []string {
-    keys := make(map[string]bool)
-    list := []string{}
+	keys := make(map[string]bool)
+	list := []string{}
 
-    for _, entry := range intSlice {
-        if _, value := keys[entry]; !value {
-            keys[entry] = true
-            list = append(list, entry)
-        }
-    }
-    return list
+	for _, entry := range intSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
-
