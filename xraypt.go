@@ -16,14 +16,14 @@ import (
 )
 
 const pCount = 7
-const pT = 750 //ms
+const pT = 1000 //ms
 const pRealCount = 2
 const pRealT = 1000 //ms
 
 const sT = 20000 //ms
 
 const threadPingCnt = 100
-const threadSpeedCnt = 2
+const threadSpeedCnt = 4
 const DSLine = 5.0
 
 const pTimeout = time.Duration(pT*2) * time.Millisecond
@@ -50,6 +50,8 @@ func main() {
 	var ports []int
 	var vmLinks []string
 	vmLinks = tools.SubGetVms(subs)
+	//os.Exit(0)
+
 	ports, err := tools.GetFreePorts(len(vmLinks))
 	if err != nil {
 		log.Fatal(err)

@@ -15,10 +15,7 @@ import (
 
 func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, pCount int, pTimeout time.Duration, pRealCount int, pRealTimeout time.Duration) {
 	for n := range jobs {
-		//var totalDelay int = 0
-		//var avgDelay int = 0
 		var fail int = 0
-		//var max int = 0
 
 		var x tools.Xray
 		err := x.Init((*n).Port, (*n).JsonPath)

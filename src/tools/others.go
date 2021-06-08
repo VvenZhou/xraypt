@@ -210,15 +210,15 @@ func GetFreePorts(count int) ([]int, error) {
 	return ports, nil
 }
 
-func RemoveDuplicateStr(intSlice []string) []string {
-	keys := make(map[string]bool)
-	list := []string{}
-
-	for _, entry := range intSlice {
-		if _, value := keys[entry]; !value {
-			keys[entry] = true
-			list = append(list, entry)
-		}
-	}
-	return list
-}
+//func RemoveDuplicateStr(intSlice []string) []string {
+//	keys := make(map[string]bool)
+//	list := []string{}
+//
+//	for _, entry := range intSlice {
+//		if _, value := keys[entry]; !value {
+//			keys[entry] = true
+//			list = append(list, entry)
+//		}
+//	}
+//	return list
+//}

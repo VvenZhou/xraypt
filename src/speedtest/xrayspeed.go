@@ -59,10 +59,10 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 			//	break
 			//}
 			s.DownloadTest(true, myClient)
-			//if s.DLSpeed < DSLine {
-			//	log.Println("DownSpeed too slow, skipped.")
-			//	break
-			//}
+			if s.DLSpeed < DSLine {
+				log.Println("DownSpeed too slow, skipped.")
+				break
+			}
 			s.UploadTest(true, myClient)
 			if s.DLSpeed >= 10 {
 				s := []string{ s.Country, "_", strconv.Itoa(int(s.Latency.Milliseconds())), "_", strconv.FormatFloat(s.DLSpeed, 'f', 4, 64)}

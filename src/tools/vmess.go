@@ -5,25 +5,25 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"strconv"
+	"log"
 )
 
 
 type VmessShare struct {
-	V string `json:"v"`
-	Ps string `json:"ps"`
+	//V string `json:"v"`
+	//Ps string `json:"ps"`
 	Add string `json:"add"`
 	Port string `json:"port"`
 	Id string `json:"id"`
 	Aid string `json:"aid"`
-	Scy string `json:"scy"`
+	//Scy string `json:"scy"`
 	Net string `json:"net"`
-	Type string `json:"type"`
+	//Type string `json:"type"`
 	Host string `json:"host"`
 	Path string `json:"path"`
 	Tls string `json:"tls"`
-	Sni string `json:"sni"`
+	//Sni string `json:"sni"`
 }
-
 
 type VmessUser struct {
 	Id string `json:"id"`
@@ -34,12 +34,13 @@ type VmessUser struct {
 
 func VmLinkToVmOut(vmess *Outbound, vmShareLink string) {
 	var vmShare VmessShare
-	headAndTail := strings.Split(vmShareLink, "vmess://")
-	data, _ := base64.StdEncoding.DecodeString(headAndTail[1])
-	err := json.Unmarshal(data, &vmShare)
-	if err != nil {
-		return
-	}
+	VmFillVmShare(&vmShare, vmShareLink)
+	//headAndTail := strings.Split(vmShareLink, "vmess://")
+	//data, _ := base64.StdEncoding.DecodeString(headAndTail[1])
+	//err := json.Unmarshal(data, &vmShare)
+	//if err != nil {
+	//	//return
+	//}
 
 	//var vmess VmessOut
 
@@ -70,4 +71,69 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) {
 	}
 	(*vmess).Mx.Enabled = true
 	//return vmess
+}
+
+func VmFillVmShare(vmShareP *VmessShare, vmLink string) {
+	var i interface{}
+	headAndTail := strings.Split(vmLink, "vmess://")
+	data, _ := base64.StdEncoding.DecodeString(headAndTail[1])
+	err := json.Unmarshal(data, &i)
+	if err != nil {
+		log.Println(err)
+	}
+	m := i.(map[string]interface{})
+
+	vmShareP.Add = m["add"].(string)
+	if i, ok := m["port"].(float64); ok {
+		flt := strconv.FormatFloat(i, 'f', -1, 64)
+		vmShareP.Port = flt
+	}else{
+		vmShareP.Port = m["port"].(string)
+	}
+	vmShareP.Id = m["id"].(string)
+	if i, ok := m["aid"].(float64); ok {
+		flt := strconv.FormatFloat(i, 'f', -1, 64)
+		vmShareP.Aid = flt
+	}else if s, ok := m["aid"].(string); ok {
+		vmShareP.Aid = s
+	}
+	if s, ok := m["net"].(string); ok {
+		vmShareP.Net = s
+	}
+	if s, ok := m["host"].(string); ok {
+		vmShareP.Host = s
+	}
+	if s, ok := m["path"].(string); ok {
+		vmShareP.Path = s
+	}
+	if s, ok := m["tls"].(string); ok {
+		vmShareP.Tls = s
+	}
+}
+
+func VmRemoveDulpicate(vmLinks []string) []string {
+	var vmNoDup []string
+	var vmShare []*VmessShare
+	var flag bool
+	for _, vmL := range vmLinks{
+		flag = true
+		var vmS VmessShare
+		VmFillVmShare(&vmS, vmL)
+		if len(vmNoDup) == 0 {
+			vmNoDup = append(vmNoDup, vmL)
+			vmShare = append(vmShare, &vmS)
+			continue
+		}
+		for _, vm := range vmShare {
+			if (*vm) == vmS {
+				flag = false
+				break
+			}
+		}
+		if flag {
+			vmNoDup = append(vmNoDup, vmL)
+			vmShare = append(vmShare, &vmS)
+		}
+	}
+	return vmNoDup
 }
