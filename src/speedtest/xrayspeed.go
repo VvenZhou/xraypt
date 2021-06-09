@@ -53,22 +53,17 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 				break
 			}
 			s.PingTest(myClient)
-			//log.Println(s.Latency.Milliseconds())
-			//if s.Country == "China" {
-			//	log.Println("Speed Skipped for China.")
-			//	break
-			//}
 			s.DownloadTest(true, myClient)
 			if s.DLSpeed < DSLine {
 				log.Println("DownSpeed too slow, skipped.")
 				break
 			}
 			s.UploadTest(true, myClient)
-			if s.DLSpeed >= 10 {
-				s := []string{ s.Country, "_", strconv.Itoa(int(s.Latency.Milliseconds())), "_", strconv.FormatFloat(s.DLSpeed, 'f', 4, 64)}
-				name := strings.Join(s, "")
-				(*node).CreateFinalJson(tools.JitPath, name)
-			}
+			//if s.DLSpeed >= 10 {
+			//	s := []string{ s.Country, "_", strconv.Itoa(int(s.Latency.Milliseconds())), "_", strconv.FormatFloat(s.DLSpeed, 'f', 4, 64)}
+			//	name := strings.Join(s, "")
+			//	(*node).CreateFinalJson(tools.JitPath, name)
+			//}
 
 			(*node).Country = s.Country
 			(*node).DLSpeed = math.Round(s.DLSpeed*100)/100

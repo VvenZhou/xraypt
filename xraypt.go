@@ -15,15 +15,15 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-const pCount = 7
+const pCount = 5
 const pT = 1000 //ms
-const pRealCount = 2
+const pRealCount = 3
 const pRealT = 1000 //ms
 
-const sT = 20000 //ms
+const sT = 12000 //ms
 
 const threadPingCnt = 100
-const threadSpeedCnt = 4
+const threadSpeedCnt = 6
 const DSLine = 5.0
 
 const pTimeout = time.Duration(pT*2) * time.Millisecond
@@ -59,8 +59,8 @@ func main() {
 
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
-	pingJob := make(chan *tools.Node, 500)
-	pingResult := make(chan *tools.Node, 500)
+	pingJob := make(chan *tools.Node, len(vmLinks))
+	pingResult := make(chan *tools.Node, len(vmLinks))
 
 	for i, s := range vmLinks {
 		var n tools.Node
