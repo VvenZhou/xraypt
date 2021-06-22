@@ -20,10 +20,10 @@ const pT = 1000 //ms
 const pRealCount = 3
 const pRealT = 1000 //ms
 
-const sT = 12000 //ms
+const sT = 20000 //ms
 
 const threadPingCnt = 100
-const threadSpeedCnt = 6
+const threadSpeedCnt = 4
 const DSLine = 5.0
 
 const pTimeout = time.Duration(pT*2) * time.Millisecond
@@ -31,7 +31,7 @@ const pRealTimeout = time.Duration(pRealT*2) * time.Millisecond
 const sTimeout = time.Duration(sT) * time.Millisecond
 
 
-var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2"}
+var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2", "https://raw.fastgit.org/v2ray-links/v2ray-free/master/v2ray", "https://raw.fastgit.org/freefq/free/master/v2"}
 var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
 
 
@@ -114,15 +114,15 @@ func main() {
 	}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
-	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDelay(goodSpeedNodes))
+	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {
-		fmt.Println((*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
+		fmt.Println(i, (*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 		//(*n).Id = strconv.Itoa(i)
 		(*n).CreateFinalJson(tools.JsonsPath, strconv.Itoa(i))
-		str := []string{(*n).ShareLink, "\nDown: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
+		str := []string{strconv.Itoa(i), "\n", (*n).ShareLink, "\nDelay:", strconv.Itoa((*n).AvgDelay), "Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
 		vmOutStr := strings.Join(str, "")
 		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}

@@ -49,7 +49,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		}
 
 		for _, s := range targets {
-			if s.Country == "China"{
+			if s.Country == "China" || s.Country == "Hong Kong"{
 				break
 			}
 			s.PingTest(myClient)

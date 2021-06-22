@@ -8,6 +8,7 @@ import (
 
 var JitPath string
 var TempPath string
+var BackupPath string
 var PreProxyPort int
 var JsonsPath string
 var XrayPath string
@@ -32,11 +33,13 @@ func GVarInit(port int){
 	if isLinux() {
 		JitPath = "jit/"
 		TempPath = "temp/"
+		BackupPath = "backup/"
 		JsonsPath = "jsons/"
 		XrayPath = "tools/xray"
 	}else{
 		JitPath = "jit\\"
 		TempPath = "temp\\"
+		BackupPath = "backup\\"
 		JsonsPath = "jsons\\"
 		XrayPath = "tools\\xray.exe"
 	}
@@ -50,6 +53,10 @@ func DirInit(){
 	if _, err := os.Stat(TempPath); os.IsNotExist(err) {
 		// path/to/whatever does not exist
 		os.MkdirAll(TempPath, 0755)
+	}
+	if _, err := os.Stat(BackupPath); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		os.MkdirAll(BackupPath, 0755)
 	}
 	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
 		// path/to/whatever does not exist

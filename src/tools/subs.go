@@ -172,6 +172,7 @@ func subLinkGetStr(subLink string) (string, error) {
 	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
+	//myClient := &http.Client{Timeout: t}
 
 	resp, err := myClient.Get(subLink)
 	if err != nil {

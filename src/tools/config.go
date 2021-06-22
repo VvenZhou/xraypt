@@ -112,7 +112,7 @@ func ConfigFinal(con *Config) {
 	s3 := DnsServer{ Address: "223.5.5.5", Domains: []string{"geosite:cn"}}
 
 	r1 := RoutingRule{ Type: "field", Domain: []string{"geosite:category-ads-all"}, OutboundTag: "block"}
-	r2 := RoutingRule{ Type: "field", Domain: []string{"geosite:cn", "geosite:bing", "geosite:category-media-cn", "geosite:apple"}, OutboundTag: "direct"}
+	r2 := RoutingRule{ Type: "field", Domain: []string{"domain:music.126.net", "domain:nature.com", "geosite:cn", "geosite:bing", "geosite:category-media-cn", "geosite:apple"}, OutboundTag: "direct"}
 	r3 := RoutingRule{ Type: "field", Domain: []string{"geosite:google", "geosite:github", "geosite:telegram", "geosite:gfw", "geosite:geolocation-!cn"}, OutboundTag: "proxy"}
 
 	o1 := Outbound{ Protocol: "freedom", Tag: "direct"}

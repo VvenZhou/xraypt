@@ -56,9 +56,9 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 				cookies = resp.Cookies()
 				break
 			}
-			if len(cookies) == 0 {
-				goto END
-			}
+			//if len(cookies) == 0 {
+			//	goto END
+			//}
 
 			for i := 0; i < pRealCount; i++{
 				delay, code, err := Ping(pRealClient, "https://www.google.com", cookies)
