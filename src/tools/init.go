@@ -12,6 +12,7 @@ var BackupPath string
 var PreProxyPort int
 var JsonsPath string
 var XrayPath string
+var SubsFilePath string
 
 func Init(preProxyPort int) {
 	GVarInit(preProxyPort)
@@ -21,6 +22,7 @@ func Init(preProxyPort int) {
 func isLinux() bool{
 	os := runtime.GOOS
 	log.Println("Platform:", os)
+	SubsFilePath = "subs.txt"
 	if os == "linux" {
 		return true
 	}else{

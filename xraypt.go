@@ -9,6 +9,7 @@ import (
 	"strings"
 	"os"
 	"time"
+	"io/ioutil"
 
 	"github.com/VvenZhou/xraypt/src/ping"
 	"github.com/VvenZhou/xraypt/src/speedtest"
@@ -30,10 +31,14 @@ const pTimeout = time.Duration(pT*2) * time.Millisecond
 const pRealTimeout = time.Duration(pRealT*2) * time.Millisecond
 const sTimeout = time.Duration(sT) * time.Millisecond
 
+var subs []string
 
-var subs = []string{"https://raw.githubusercontent.com/ssrsub/ssr/master/v2ray", "https://jiang.netlify.com", "https://raw.githubusercontent.com/freefq/free/master/v2", "https://raw.fastgit.org/v2ray-links/v2ray-free/master/v2ray", "https://raw.fastgit.org/freefq/free/master/v2"}
-var subJ = []string{"https://raw.githubusercontent.com/freefq/free/master/v2"}
-
+var protocols = []string{
+	"vmess",
+	"vless",
+	"ss",
+	"ssr",
+	"trojan"}
 
 func main() {
 	tools.Init(8123)
@@ -45,14 +50,22 @@ func main() {
 	////fmt.Printf("%+v\n", out)
 	//os.Exit(0)
 
+	byteData, err := ioutil.ReadFile(tools.SubsFilePath)
+	if err != nil {
+		log.Println("SubFile read error:", err)
+	}else{
+		log.Println("SubFile get...")
+		subs = strings.Fields(string(byteData))
+	}
 
 	//var nodes []tools.Node
 	var ports []int
 	var vmLinks []string
-	vmLinks = tools.SubGetVms(subs)
-	//os.Exit(0)
+	vmLinks = tools.SubGet(protocols, subs)
+	//vmLinks = tools.SubGetVms(subs)
+	os.Exit(0)
 
-	ports, err := tools.GetFreePorts(len(vmLinks))
+	ports, err = tools.GetFreePorts(len(vmLinks))
 	if err != nil {
 		log.Fatal(err)
 	}
