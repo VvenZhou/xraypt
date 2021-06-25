@@ -16,14 +16,14 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-const pCount = 5
-const pT = 1000 //ms
+const pCount = 7
+const pT = 1500 //ms
 const pRealCount = 3
-const pRealT = 1000 //ms
+const pRealT = 1500 //ms
 
 const sT = 20000 //ms
 
-const threadPingCnt = 100
+const threadPingCnt = 200
 const threadSpeedCnt = 4
 const DSLine = 5.0
 
@@ -63,7 +63,7 @@ func main() {
 	var vmLinks []string
 	vmLinks = tools.SubGet(protocols, subs)
 	//vmLinks = tools.SubGetVms(subs)
-	os.Exit(0)
+	//os.Exit(0)
 
 	ports, err = tools.GetFreePorts(len(vmLinks))
 	if err != nil {
@@ -120,10 +120,10 @@ func main() {
 	for i := 1; i <= goodSpeeds; i++ {
 		n := <-speedResult
 		if (*n).DLSpeed > 5.0 {
-			log.Println("Speed got one!")
+			//log.Println("Speed got one!")
 			goodSpeedNodes = append(goodSpeedNodes, n)
 		}
-		log.Println("DownSpeed too slow, abandoned")
+		//log.Println("DownSpeed too slow, abandoned")
 	}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
