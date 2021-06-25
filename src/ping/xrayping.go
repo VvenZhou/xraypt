@@ -35,9 +35,12 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 		var cookies []*http.Cookie
 
 		for i := 0; i < pCount; i++ {
-			_, _, err := Ping(pClient, "https://www.google.com/gen_204", cookies)
+			_, _, coo,  err := Ping(pClient, "https://www.google.com/gen_204", cookies)
 			if err != nil {
 				fail += 1
+			}else{
+				cookies = coo
+				//log.Println("ping gen succ", cookies)
 			}
 		}
 
@@ -45,23 +48,9 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			var pRealTotalDelay int
 			var pRealAvgDelay int
 			var pRealCnt int
-			var cookies []*http.Cookie
-
-			for cnt := 1; cnt <= 3; cnt += 1{
-				resp, err := pClient.Get("https://www.google.com")
-				if err != nil{
-					log.Println("get cookies error:", err)
-					continue
-				}
-				cookies = resp.Cookies()
-				break
-			}
-			//if len(cookies) == 0 {
-			//	goto END
-			//}
 
 			for i := 0; i < pRealCount; i++{
-				delay, code, err := Ping(pRealClient, "https://www.google.com", cookies)
+				delay, code, _, err := Ping(pRealClient, "https://www.google.com", cookies)
 				if err != nil && code != 429{
 					log.Println("PingReal fail", i + 1, "times,", "error:", err)
 					//time.Sleep(50*time.Millisecond)
@@ -88,7 +77,9 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 	}
 }
 
-func Ping(myClient *http.Client, url string, cookies []*http.Cookie) (int, int, error){
+func Ping(myClient *http.Client, url string, cookies []*http.Cookie) (int, int, []*http.Cookie, error){
+	var coo []*http.Cookie
+
 	req, _ := http.NewRequest("GET", url, nil)
 	for i := range cookies {
 		req.AddCookie(cookies[i])
@@ -98,7 +89,7 @@ func Ping(myClient *http.Client, url string, cookies []*http.Cookie) (int, int, 
 	resp, err := myClient.Do(req) //send request
 	stop := time.Now()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, coo, err
 	}
 	//start := time.Now()
 	//resp, err := myClient.Get(url)
@@ -113,10 +104,12 @@ func Ping(myClient *http.Client, url string, cookies []*http.Cookie) (int, int, 
 		//if code != 503 {
 			//log.Println("code is", code, "instead of 204,")
 		//}
-		return 0, code,  errors.New("Ping err: StatusCode is not 204 or 429")
+		return 0, code, coo, errors.New("Ping err: StatusCode is not 204 or 429")
 	}
+
+	coo = resp.Cookies()
 
 	elapsed := stop.Sub(start)
 	delay := elapsed.Milliseconds()/2
-	return int(delay), code,  nil
+	return int(delay), code, coo, nil
 }
