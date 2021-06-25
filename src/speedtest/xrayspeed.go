@@ -1,11 +1,6 @@
 package speedtest
 
 import (
-	"net/http"
-	"strings"
-	"net/url"
-	"time"
-	"strconv"
 	"sync"
 	"log"
 	"math"
@@ -14,7 +9,7 @@ import (
 )
 
 
-func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, timeout time.Duration, DSLine float64) {
+func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node) {
 	for node := range jobs {
 		log.Println("Speed: start testing!")
 		var x tools.Xray
@@ -22,9 +17,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		x.Init((*node).Port, (*node).JsonPath)
 		x.Run()
 
-		str := []string{"http://127.0.0.1", strconv.Itoa(x.Port)}
-		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-		myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
+		myClient := tools.HttpClientGet(x.Port, tools.STimeout)
 
 		START:
 		user, err := FetchUserInfo(myClient)
@@ -71,16 +64,11 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 			}
 			s.PingTest(myClient)
 			s.DownloadTest(true, myClient)
-			if s.DLSpeed < DSLine {
+			if s.DLSpeed < tools.DSLine {
 				log.Println("DownSpeed too slow, skipped.")
 				break
 			}
 			s.UploadTest(true, myClient)
-			//if s.DLSpeed >= 10 {
-			//	s := []string{ s.Country, "_", strconv.Itoa(int(s.Latency.Milliseconds())), "_", strconv.FormatFloat(s.DLSpeed, 'f', 4, 64)}
-			//	name := strings.Join(s, "")
-			//	(*node).CreateFinalJson(tools.JitPath, name)
-			//}
 
 			(*node).Country = s.Country
 			(*node).DLSpeed = math.Round(s.DLSpeed*100)/100

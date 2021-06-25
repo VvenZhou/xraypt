@@ -2,6 +2,11 @@ package tools
 
 import (
 	"runtime"
+	"time"
+	"strconv"
+	"net/url"
+	"net/http"
+	"strings"
 	"log"
 	"os"
 )
@@ -13,6 +18,21 @@ var PreProxyPort int
 var JsonsPath string
 var XrayPath string
 var SubsFilePath string
+
+
+const PThreadNum = 200
+const SThreadNum = 4
+const DSLine = 5.0
+const PCnt = 7
+const PRealCnt = 3
+
+const pT = 1500 //ms
+const pRealT = 1500 //ms
+const sT = 20000 //ms
+
+const PTimeout = time.Duration(pT*2) * time.Millisecond
+const PRealTimeout = time.Duration(pRealT*2) * time.Millisecond
+const STimeout = time.Duration(sT) * time.Millisecond
 
 func Init(preProxyPort int) {
 	GVarInit(preProxyPort)
@@ -64,4 +84,11 @@ func DirInit(){
 		// path/to/whatever does not exist
 		os.MkdirAll(JsonsPath, 0755)
 	}
+}
+
+func HttpClientGet(port int, timeout time.Duration) *http.Client {
+	str := []string{"http://127.0.0.1", strconv.Itoa(port)}
+	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
+	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
+	return myClient
 }

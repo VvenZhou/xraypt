@@ -2,18 +2,15 @@ package ping
 
 import (
 	"log"
-	"net/http"
-	"net/url"
-	"strings"
-	"strconv"
 	"time"
+	"net/http"
 	"errors"
 	"sync"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, pCount int, pTimeout time.Duration, pRealCount int, pRealTimeout time.Duration) {
+func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node) {
 	for n := range jobs {
 		var fail int = 0
 
@@ -27,14 +24,12 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			log.Fatal(err)
 		}
 
-		str := []string{"http://127.0.0.1", strconv.Itoa(x.Port)}
-		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-		pClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: pTimeout}
-		pRealClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: pRealTimeout}
+		pClient := tools.HttpClientGet(x.Port, tools.PTimeout)
+		pRealClient := tools.HttpClientGet(x.Port, tools.PRealTimeout)
 
 		var cookies []*http.Cookie
 
-		for i := 0; i < pCount; i++ {
+		for i := 0; i < tools.PCnt; i++ {
 			_, _, coo,  err := Ping(pClient, "https://www.google.com/gen_204", cookies)
 			if err != nil {
 				fail += 1
@@ -44,12 +39,12 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			}
 		}
 
-		if !(fail >= (pCount+1)/2) {
+		if !(fail >= (tools.PCnt+1)/2) {
 			var pRealTotalDelay int
 			var pRealAvgDelay int
 			var pRealCnt int
 
-			for i := 0; i < pRealCount; i++{
+			for i := 0; i < tools.PRealCnt; i++{
 				delay, code, _, err := Ping(pRealClient, "https://www.google.com", cookies)
 				if err != nil && code != 429{
 					log.Println("PingReal fail", i + 1, "times,", "error:", err)
@@ -91,12 +86,6 @@ func Ping(myClient *http.Client, url string, cookies []*http.Cookie) (int, int, 
 	if err != nil {
 		return 0, 0, coo, err
 	}
-	//start := time.Now()
-	//resp, err := myClient.Get(url)
-	//stop := time.Now()
-	//if err != nil {
-	//	return 0, 0, err
-	//}
 	code := resp.StatusCode
 
 	defer resp.Body.Close()
