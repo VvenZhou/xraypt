@@ -18,6 +18,7 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 	for node := range jobs {
 		log.Println("Speed: start testing!")
 		var x tools.Xray
+		var fail int
 		x.Init((*node).Port, (*node).JsonPath)
 		x.Run()
 
@@ -25,27 +26,43 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 		myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
 
+		START:
 		user, err := FetchUserInfo(myClient)
 		if err != nil {
-			x.Stop()
-			wg.Done()
 			log.Println("[ERROR]", "Fetch user info:", err)
-			continue
+			fail += 1
+			if fail >= 3 {
+				x.Stop()
+				wg.Done()
+				continue
+			}else{
+				goto START
+			}
 		}
 
 		serverList, err := FetchServerList(user, myClient)
 		if err != nil {
-			x.Stop()
-			wg.Done()
 			log.Println("[ERROR]", "Fetch server list:", err)
-			continue
+			fail += 1
+			if fail >= 3 {
+				x.Stop()
+				wg.Done()
+				continue
+			}else{
+				goto START
+			}
 		}
 		targets, err := serverList.FindServer([]int{})
 		if err != nil {
-			x.Stop()
-			wg.Done()
 			log.Println("[ERROR]", "Find server:", err)
-			continue
+			fail += 1
+			if fail >= 3 {
+				x.Stop()
+				wg.Done()
+				continue
+			}else{
+				goto START
+			}
 		}
 
 		for _, s := range targets {
