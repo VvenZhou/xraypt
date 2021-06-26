@@ -1,6 +1,5 @@
 package tools
 import (
-	"strconv"
 	"net/url"
 	"net/http"
 	"io/ioutil"
@@ -9,7 +8,6 @@ import (
 	"encoding/base64"
 	"log"
 	"strings"
-	"time"
 	"regexp"
 	"github.com/antchfx/htmlquery"
 )
@@ -28,9 +26,15 @@ func SubGet(protocols []string, subs []string) []string {
 
 	flagVm, flagVl, flagSs, flagSsr, flagTrojan := checkProtocols(protocols)
 
+	var fail int = 0
+	START_FREEFQ:
 	pStr, err := getAllFromFreefq()
 	if err != nil {
-		log.Println("Get from Freefq error:", err)
+		log.Println("[ERROR]: Get from Freefq:", err)
+		fail += 1
+		if fail < 3 {
+			goto START_FREEFQ
+		}
 	}else{
 		if flagVl {
 			Re := regexp.MustCompile(`(vless://.*)<br>`)
@@ -62,48 +66,69 @@ func SubGet(protocols []string, subs []string) []string {
 		}
 	}
 	for _, sub := range subs {
+		fail = 0
+		START_SUBLINK:
 		pdata, err := getStrFromSublink(sub)
 		if err != nil {
-			log.Println("[ERROR]", "SubGet:", err)
-			continue
-		}
-		strs := strings.Fields(*pdata)
-		for _, s := range strs {
-			if flagVm {
-				if len(strings.Split(s, "vmess://")) == 2 {
-					subLs.vms = append(subLs.vms, s)
-				}
+			log.Println("[ERROR]", "SubGet:", sub, err)
+			fail += 1
+			if fail < 3 {
+				goto START_SUBLINK
 			}
-			if flagSs {
-				if len(strings.Split(s, "ss://")) == 2 {
-					subLs.sses = append(subLs.sses, s)
+		}else{
+			log.Println("SubString got!")
+			strs := strings.Fields(*pdata)
+			for _, s := range strs {
+				if flagVm {
+					if len(strings.Split(s, "vmess://")) == 2 {
+						subLs.vms = append(subLs.vms, s)
+					}
 				}
-			}
-			if flagTrojan {
-				if len(strings.Split(s, "trojan://")) == 2 {
-					subLs.trojans = append(subLs.trojans, s)
+				if flagSs {
+					if len(strings.Split(s, "ss://")) == 2 {
+						subLs.sses = append(subLs.sses, s)
+					}
 				}
-			}
-			if flagVl {
-				if len(strings.Split(s, "vless://")) == 2 {
-					subLs.vlesses = append(subLs.vlesses, s)
+				if flagTrojan {
+					if len(strings.Split(s, "trojan://")) == 2 {
+						subLs.trojans = append(subLs.trojans, s)
+					}
 				}
-			}
-			if flagSsr {
-				if len(strings.Split(s, "ssr://")) == 2 {
-					subLs.ssrs = append(subLs.ssrs, s)
+				if flagVl {
+					if len(strings.Split(s, "vless://")) == 2 {
+						subLs.vlesses = append(subLs.vlesses, s)
+					}
+				}
+				if flagSsr {
+					if len(strings.Split(s, "ssr://")) == 2 {
+						subLs.ssrs = append(subLs.ssrs, s)
+					}
 				}
 			}
 		}
 	}
 	if flagVm {
-		yousVms := getVmFromYou()
-		for _, vm := range yousVms {
-			subLs.vms = append(subLs.vms, strings.TrimSpace(vm))
+		fail = 0
+		START_YOU:
+		yousVms, err := getVmFromYou()
+		if err != nil {
+			log.Println("[ERROR]: getVmFrom You:", err)
+			fail += 1
+			if fail < 3 {
+				goto START_YOU
+			}
+		}else{
+			for _, vm := range yousVms {
+				subLs.vms = append(subLs.vms, strings.TrimSpace(vm))
+			}
 		}
-		vmOutVms := getVmFromVmout()
-		for _, vm := range vmOutVms {
-			subLs.vms = append(subLs.vms, vm)
+		vmOutVms, err := getVmFromVmout()
+		if err != nil {
+			log.Println("[ERROR]: getVmFrom Vmout:", err)
+		}else{
+			for _, vm := range vmOutVms {
+				subLs.vms = append(subLs.vms, vm)
+			}
 		}
 	}
 
@@ -128,40 +153,28 @@ func SubGet(protocols []string, subs []string) []string {
 	return subLs.vms
 }
 
-//func getVms(subs []string) []string {
-//	var vms []string
-//
-//	vmOutVms := GetVmFromVmOut()
-//	for _, vm := range vmOutVms {
-//		vms = append(vms, vm)
-//	}
-//
-//	yousVms := GetVmFromYousVms()
-//	for _, vm := range yousVms {
-//		vms = append(vms, strings.TrimSpace(vm))
-//	}
-//
-//	vm2 := VmRemoveDulpicate(vms)
-//	return vm2
-//}
+func getVmFromYou() ([]string, error) {
+	log.Println("You fetching start...")
+	var cookie []*http.Cookie
+	myClient := HttpClientGet(PreProxyPort, SubTimeout)
+	req := HttpNewRequest("https://www.youneed.win/free-v2ray")
 
-func getVmFromYou() []string {
-	var t time.Duration = time.Duration(10000) * time.Millisecond
-	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
-	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
-
-	rHtml, err := myClient.Get("https://www.youneed.win/free-v2ray")
+	rHtml, err := myClient.Do(req)
 	if err != nil {
-		log.Println(err)
-		return []string{}
+		//log.Println(err)
+		return []string{}, err
 	}
 	defer rHtml.Body.Close()
 
+	coo := rHtml.Cookies()
+	if len(coo) > 0 {
+		cookie = coo
+	}
+
 	body, err := io.ReadAll(rHtml.Body)
 	if err != nil {
-		log.Println(err)
-		return []string{}
+		//log.Println(err)
+		return []string{}, err
 	}
 	ps_ajax := regexp.MustCompile(`var ps_ajax = \{.*,"nonce":"(.*?)".*,"post_id":"(\d+?)".*\};`)
 	psStr := ps_ajax.FindStringSubmatch(string(body))
@@ -170,7 +183,7 @@ func getVmFromYou() []string {
 		//log.Printf("nonce: %s post_id: %s\n", psStr[1], psStr[2])
 	}else{
 		log.Printf("getVmFromYou error: no nonce information!")
-		return []string{}
+		return []string{}, err
 	}
 
 	nonceStr := psStr[1]
@@ -184,16 +197,20 @@ func getVmFromYou() []string {
 		"protection": {""},
 	}
 	//fmt.Println(data.Encode())
-	req, err := http.NewRequest(http.MethodPost, "https://www.youneed.win/wp-admin/admin-ajax.php", strings.NewReader(data.Encode()))
+	req, err = http.NewRequest(http.MethodPost, "https://www.youneed.win/wp-admin/admin-ajax.php", strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Println(err)
-		return []string{}
+		//log.Println(err)
+		return []string{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Close = true
+	for i := range cookie {
+		req.AddCookie(cookie[i])
+	}
 	respContent, err := myClient.Do(req)
 	if err != nil {
-		log.Println(err)
-		return []string{}
+		//log.Println(err)
+		return []string{}, err
 	}
 	defer respContent.Body.Close()
 
@@ -207,26 +224,34 @@ func getVmFromYou() []string {
 		vmes = append(vmes, vm[1])
 	}
 	log.Println("YouNeedWind get", len(vmes), "vmesses.")
-	return vmes
+	return vmes, nil
 }
 
 func getAllFromFreefq() (*string, error) {
-	var t time.Duration = time.Duration(10000) * time.Millisecond
+	log.Println("Freefq fetching start...")
+	var cookie []*http.Cookie
+	myClient := HttpClientGet(PreProxyPort, SubTimeout)
 	subLink := "https://www.freefq.com/v2ray/"
-	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
-	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
-	resp, err := myClient.Get(subLink)
+	req := HttpNewRequest(subLink)
+
+	resp, err := myClient.Do(req)
 	if err != nil {
 		//log.Println("fetch error!")
 		//return []string{}
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	coo := resp.Cookies()
+	if len(coo) > 0 {
+		cookie = coo
+	}
 	contents, _ := ioutil.ReadAll(resp.Body)
 
-	//doc, err := htmlquery.LoadURL("http://example.com/")
 	doc, err := htmlquery.Parse(strings.NewReader(string(contents)))
+	if err != nil {
+		return nil, err
+	}
 	a := htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/ul[1]/li[1]/a")
 	h2Tail := htmlquery.SelectAttr(a, "href")
 	log.Printf("%s\n", h2Tail)
@@ -234,20 +259,24 @@ func getAllFromFreefq() (*string, error) {
 	s := []string{"https://www.freefq.com", h2Tail}
 	h2 := strings.Join(s, "")
 	log.Printf("%s\n", h2)
-	resp2, err := myClient.Get(h2)
+
+	req = HttpNewRequest(h2, cookie)
+	resp2, err := myClient.Do(req)
 	if err != nil {
-		//log.Println("fetch h2 error!")
-		//return []string{}
 		return nil, err
 	}
 	defer resp2.Body.Close()
 	contents, _ = ioutil.ReadAll(resp2.Body)
 	doc, err = htmlquery.Parse(strings.NewReader(string(contents)))
+	if err != nil {
+		return nil, err
+	}
 	a = htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/table[2]/tbody/tr/td/div/fieldset/table/tbody/tr/td/a")
 	h3 := htmlquery.SelectAttr(a, "href")
 	log.Printf("%s\n", h3)
 
-	resp3, err := myClient.Get(h3)
+	req = HttpNewRequest(h3, cookie)
+	resp3, err := myClient.Do(req)
 	if err != nil {
 		//log.Println("fetch h2 error!")
 		//return []string{}
@@ -256,48 +285,33 @@ func getAllFromFreefq() (*string, error) {
 	defer resp3.Body.Close()
 	contents, _ = ioutil.ReadAll(resp3.Body)
 	strContents := string(contents)
-
+	log.Println("Freefq fetching Done.")
 	return &strContents, nil
-	//fmt.Printf("%s\n", string(contents))
-
-	//var vms []string
-	//vmRe := regexp.MustCompile(`(vmess://.*)<br>`)
-	//strStr := vmRe.FindAllStringSubmatch(string(contents), -1)
-	//for _, list := range strStr{
-	//	vms = append(vms, list[1])
-	//}
-	//log.Println("Freefq get", len(vms), "vmesses.")
-
-	//return vms
 }
 
 func getStrFromSublink(subLink string) (*string, error) {
-	var t time.Duration = time.Duration(10000) * time.Millisecond
-	str := []string{"http://127.0.0.1", strconv.Itoa(PreProxyPort)}
-	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: t}
-	//myClient := &http.Client{Timeout: t}
+	myClient := HttpClientGet(PreProxyPort, SubTimeout)
+	req := HttpNewRequest(subLink)
 
-	resp, err := myClient.Get(subLink)
+	resp, err := myClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	contents, _ := ioutil.ReadAll(resp.Body)
-	log.Println("SubString got!")
 
 	byteData, err := base64.StdEncoding.DecodeString(string(contents))
 	if err != nil {
-		log.Println("error:", err)
+		return nil, err
 	}
 	strData := string(byteData)
 	return &strData, nil
 }
 
-func getVmFromVmout() []string{
+func getVmFromVmout() ([]string, error){
 	content, err := ioutil.ReadFile("vmOut.txt")
 	if err != nil {
-		return []string{}
+		return []string{}, err
 	}
 	var vms []string
 	strs := strings.Split(string(content), "\n")
@@ -306,17 +320,7 @@ func getVmFromVmout() []string{
 			vms = append(vms, strings.TrimSpace(s))
 		}
 	}
-	//log.Println("Get VmOut", len(vms), "vmesses.")
-	return vms
-}
-
-func strInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
+	return vms, nil
 }
 
 func checkProtocols(protocols []string) (flagVm , flagVl, flagSs, flagSsr, flagTrojan bool) {
@@ -346,4 +350,13 @@ func checkProtocols(protocols []string) (flagVm , flagVl, flagSs, flagSsr, flagT
 		flagSsr = false
 	}
 	return
+}
+
+func strInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

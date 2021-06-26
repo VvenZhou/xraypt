@@ -77,19 +77,13 @@ type HttpIn struct{
 	Port int `json:"port"`
 }
 
-//type Dns struct {
-//	Servers []string `json:"servers"`
-//}
 
-//type Routing struct {
-//	DomainStrategy string `json:"domainStrategy"`
-//	Rules []struct {
-//		Type string `json:"type"`
-//		Domain []string `json:"domain"`
-//		OutboundTag string `json:"outboundTag"`
-//	} `json:"rules"`
-//}
 func ConfigFinal(con *Config) {
+
+	type Outbound struct{
+		Protocol string `json:"protocol"`
+		Tag string `json:"tag"`
+	}
 
 	type DnsServer struct {
 		Address string `json:"address"`
@@ -100,11 +94,6 @@ func ConfigFinal(con *Config) {
 		Type string `json:"type"`
 		Domain []string `json:"domain"`
 		OutboundTag string `json:"outboundTag"`
-	}
-
-	type Outbound struct{
-		Protocol string `json:"protocol"`
-		Tag string `json:"tag"`
 	}
 
 	s1 := DnsServer{ Address: "8.8.8.8", Domains: []string{"geosite:geolocation-!cn"}}
@@ -122,11 +111,14 @@ func ConfigFinal(con *Config) {
 	(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{r1, r2, r3}
 
 	preCon := (*con).Outbounds[0]
-	//(*con).Outbounds = append((*con).Outbounds, o1, o2)
 	(*con).Outbounds = []interface{}{ preCon, o1, o2}
 }
 
 func OutToConfig(con *Config, vmOut Outbound ) {
+	//o2 := Outbound{ Protocol: "blackhole", Tag: "block"}
+
+	//r1 := RoutingRule{ Type: "field", Domain: []string{"geosite:category-ads-all"}, OutboundTag: "block"}
+
 	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: 8123, Protocol: "http"}
 	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
 	//var con Config
@@ -134,6 +126,7 @@ func OutToConfig(con *Config, vmOut Outbound ) {
 	(*con).Inbounds = []interface{}{ htIn, soIn }
 	(*con).Outbounds = []interface{}{ vmOut }
 	(*con).Dns.Servers = []interface{}{ "8.8.8.8", "1.1.1.1" }
+
 	(*con).Routing.DomainStrategy = "AsIs"
 	//(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{{Type: "field", Domain: []string{"geosite:google", "domain:speedtest.com"}, OutboundTag: "proxy"}}
 	(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{}

@@ -63,10 +63,6 @@ func (n *Node) CreateJson(dirPath string) {
 
 	n.Con = &con
 
-	//out, err := exec.Command("uuidgen").Output()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
 	out := uuid.New().String()
 	s := []string{dirPath, strings.TrimSpace(string(out)), ".json"}
 	n.JsonPath = strings.Join(s, "")
@@ -113,84 +109,30 @@ func (n *Node) CreateFinalJson(dirPath string, name string) {
 func (x *Xray) Init(port int, jsonPath string) error {
 	x.Port = port
 	x.JsonPath = jsonPath
-	//x.randPort = false
-
-	//s := []string{"temp/xrayRun_port_", strconv.Itoa(x.Port), ".json"}
-	//x.JsonPath = strings.Join(s, "")
-	//err := JsonChangePort(jsonPath, jsonPath, x.Port)
-	//if err != nil {
-	//	return err
-	//}
 	return nil
 }
 
 func (x *Xray) Run() error {
-	//if randPort {
-	//	//log.Println("randport")
-	//	x.randPort = true
-	//	x.Port, _ = GetFreePort()
-	//	s := []string{"temp/", "xrayRun_port_", strconv.Itoa(x.Port), ".json"}
-
-	//	path := strings.Join(s, "")
-	//	err := JsonChangePort(x.JsonPath, path, x.Port)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	x.JsonPath = path
-	//}
-
-	//log.Println("runnning Xray: ", x.JsonPath, " at ", x.Port)
 	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
-	//x.cmd.SysProcAttr = &syscall.SysProcAttr{
-	//	Pdeathsig: syscall.SIGTERM,
-	//}
-	//stdout, _ := cmd.StdoutPipe()
 
 	err := x.cmd.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//log.Printf("xray executing, using json: %s\n", x.JsonPath)
 	time.Sleep(750 * time.Millisecond)
-	//log.Println("xray started!")
-	//go print(stdout)
 	return nil
 }
 
 func (x *Xray) Stop() error {
 	err := x.cmd.Process.Signal(syscall.SIGTERM)
 
-	//err := x.cmd.Process.Kill()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
 	_, err = x.cmd.Process.Wait()
 	if err != nil {
 		log.Fatal(err)
 	}
-	//log.Println(ps.Success())
-
-	//if x.randPort {
-	//	//os.Remove(x.JsonPath)
-	//	//err = os.Remove(x.JsonPath)
-	//	//if err != nil {
-	//	//	log.Fatal(err)
-	//	//}
-	//}
-
-	//log.Println("xray stopped.")
 	return nil
 }
-
-//func print(stdout io.ReadCloser) {
-//	for {
-//		r := bufio.NewReader(stdout)
-//		line, _, _ := r.ReadLine()
-//		fmt.Println(string(line))
-//	}
-//}
 
 func GetFreePorts(count int) ([]int, error) {
 	var ports []int

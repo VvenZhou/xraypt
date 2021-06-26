@@ -82,9 +82,13 @@ func main() {
 		n := <-pingResult
 		goodPingNodes = append(goodPingNodes, n)
 	}
-	for _, n := range goodPingNodes {
-		fmt.Println("avgDelay:", (*n).AvgDelay)
+
+	//sort.Stable(tools.ByDelay(goodPingNodes))
+	for i, n := range goodPingNodes {
+		fmt.Println(i, n.AvgDelay)
 	}
+
+	//os.Exit(0)
 
 	var goodSpeedNodes []*tools.Node
 	var wgSpeed sync.WaitGroup
@@ -103,23 +107,35 @@ func main() {
 	goodSpeeds := len(speedResult)
 	for i := 1; i <= goodSpeeds; i++ {
 		n := <-speedResult
-		if (*n).DLSpeed > 5.0 {
-			//log.Println("Speed got one!")
-			goodSpeedNodes = append(goodSpeedNodes, n)
+		goodSpeedNodes = append(goodSpeedNodes, n)
+	}
+
+	var halfGoodVmLinks []string
+	for i, n := range goodPingNodes {
+		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
+		str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
+		vmOutStr := strings.Join(str, "")
+		halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
+	}
+	if len(halfGoodVmLinks) != 0 {
+		bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
+		err := os.WriteFile("vmHalfOut.txt", bytes, 0644)
+		if err != nil {
+			log.Println(err)
+		}else{
+			log.Println("vmHalfOut generated!")
 		}
-		//log.Println("DownSpeed too slow, abandoned")
 	}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDelay(goodSpeedNodes))
 	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
-
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {
 		fmt.Println(i, (*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 		//(*n).Id = strconv.Itoa(i)
-		(*n).CreateFinalJson(tools.JsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", (*n).ShareLink, "\nDelay:", strconv.Itoa((*n).AvgDelay), "Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
+		n.CreateFinalJson(tools.JsonsPath, strconv.Itoa(i))
+		str := []string{strconv.Itoa(i), "\n", (*n).ShareLink, "\nDelay:", strconv.Itoa((*n).AvgDelay), " Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
 		vmOutStr := strings.Join(str, "")
 		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}

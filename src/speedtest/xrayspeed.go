@@ -4,6 +4,7 @@ import (
 	"sync"
 	"log"
 	"math"
+	"time"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
@@ -29,9 +30,11 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 				wg.Done()
 				continue
 			}else{
+				time.Sleep(3 * time.Second)
 				goto START
 			}
 		}
+		fail = 0
 
 		serverList, err := FetchServerList(user, myClient)
 		if err != nil {
@@ -42,9 +45,12 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 				wg.Done()
 				continue
 			}else{
+				time.Sleep(3 * time.Second)
 				goto START
 			}
 		}
+		fail = 0
+
 		targets, err := serverList.FindServer([]int{})
 		if err != nil {
 			log.Println("[ERROR]", "Find server:", err)
@@ -54,9 +60,11 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 				wg.Done()
 				continue
 			}else{
+				time.Sleep(3 * time.Second)
 				goto START
 			}
 		}
+		fail = 0
 
 		for _, s := range targets {
 			if s.Country == "China" || s.Country == "Hong Kong"{

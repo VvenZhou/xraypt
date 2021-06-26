@@ -16,23 +16,27 @@ var TempPath string
 var BackupPath string
 var PreProxyPort int
 var JsonsPath string
+var HalfJsonsPath string
 var XrayPath string
 var SubsFilePath string
 
 
-const PThreadNum = 200
+const PThreadNum = 150
 const SThreadNum = 4
-const DSLine = 5.0
-const PCnt = 7
-const PRealCnt = 3
+const DSLine = 2.0
 
-const pT = 1500 //ms
-const pRealT = 1500 //ms
-const sT = 20000 //ms
+const PCnt = 9 //must be larger than 3
+const PRealCnt = 7
+
+const subT = 5000
+const pT = 1000 //ms
+const pRealT = 1000 //ms
+const sT = 10000 //ms
 
 const PTimeout = time.Duration(pT*2) * time.Millisecond
 const PRealTimeout = time.Duration(pRealT*2) * time.Millisecond
 const STimeout = time.Duration(sT) * time.Millisecond
+const SubTimeout = time.Duration(subT) * time.Millisecond
 
 func Init(preProxyPort int) {
 	GVarInit(preProxyPort)
@@ -57,12 +61,14 @@ func GVarInit(port int){
 		TempPath = "temp/"
 		BackupPath = "backup/"
 		JsonsPath = "jsons/"
+		HalfJsonsPath = "halfJsons/"
 		XrayPath = "tools/xray"
 	}else{
 		JitPath = "jit\\"
 		TempPath = "temp\\"
 		BackupPath = "backup\\"
 		JsonsPath = "jsons\\"
+		HalfJsonsPath = "halfJsons\\"
 		XrayPath = "tools\\xray.exe"
 	}
 }
@@ -84,6 +90,10 @@ func DirInit(){
 		// path/to/whatever does not exist
 		os.MkdirAll(JsonsPath, 0755)
 	}
+	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		os.MkdirAll(HalfJsonsPath, 0755)
+	}
 }
 
 func HttpClientGet(port int, timeout time.Duration) *http.Client {
@@ -91,4 +101,19 @@ func HttpClientGet(port int, timeout time.Duration) *http.Client {
 	proxyUrl, _ := url.Parse(strings.Join(str, ":"))
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
 	return myClient
+}
+
+func HttpNewRequest(url string, cookies ...[]*http.Cookie) *http.Request {
+	var coo []*http.Cookie
+
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0i")
+	req.Close = true
+	if len(cookies) > 0 {
+		coo = cookies[0]
+		for i := range coo {
+			req.AddCookie(coo[i])
+		}
+	}
+	return req
 }
