@@ -42,12 +42,9 @@ func main() {
 		subs = strings.Fields(string(byteData))
 	}
 
-	//var nodes []tools.Node
 	var ports []int
 	var vmLinks []string
 	vmLinks = tools.SubGet(protocols, subs)
-	//vmLinks = tools.SubGetVms(subs)
-	//os.Exit(0)
 
 	ports, err = tools.GetFreePorts(len(vmLinks))
 	if err != nil {
@@ -76,19 +73,38 @@ func main() {
 	wgPing.Wait()
 	log.Println("ping finished")
 	goodPingCnt := len(pingResult)
-	log.Printf("there are %d good pings\n", goodPingCnt)
+	log.Printf("There are %d good pings\n", goodPingCnt)
 
 	for i := 1; i <= goodPingCnt; i++  {
 		n := <-pingResult
 		goodPingNodes = append(goodPingNodes, n)
 	}
 
-	//sort.Stable(tools.ByDelay(goodPingNodes))
-	for i, n := range goodPingNodes {
-		fmt.Println(i, n.AvgDelay)
-	}
+	sort.Stable(tools.ByDelay(goodPingNodes))
+	//for i, n := range goodPingNodes {
+	//	fmt.Println(i, n.AvgDelay)
+	//}
 
-	//os.Exit(0)
+	var halfGoodVmLinks []string
+	for i, n := range goodPingNodes {
+		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
+		str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
+		vmOutStr := strings.Join(str, "")
+		halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
+	}
+	if len(halfGoodVmLinks) != 0 {
+		bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
+		err := os.WriteFile("vmHalfOut.txt", bytes, 0644)
+		if err != nil {
+			log.Println(err)
+		}else{
+			log.Println("vmHalfOut generated!")
+		}
+	}
+	os.Exit(0)
+
+
+
 
 	var goodSpeedNodes []*tools.Node
 	var wgSpeed sync.WaitGroup
@@ -110,7 +126,7 @@ func main() {
 		goodSpeedNodes = append(goodSpeedNodes, n)
 	}
 
-	var halfGoodVmLinks []string
+	//var halfGoodVmLinks []string
 	for i, n := range goodPingNodes {
 		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
 		str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
@@ -151,7 +167,9 @@ func main() {
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
-	os.RemoveAll(tools.JitPath)
-	os.MkdirAll(tools.JitPath, 0755)
+	//os.RemoveAll(tools.JitPath)
+	//os.MkdirAll(tools.JitPath, 0755)
+	//os.RemoveAll(tools.HalfJsonsPath)
+	//os.MkdirAll(tools.HalfJsonsPath, 0755)
 }
 

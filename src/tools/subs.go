@@ -291,6 +291,7 @@ func getAllFromFreefq() (*string, error) {
 
 func getStrFromSublink(subLink string) (*string, error) {
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
+	//myClient := HttpClientGet(0, SubTimeout)
 	req := HttpNewRequest(subLink)
 
 	resp, err := myClient.Do(req)
@@ -315,6 +316,17 @@ func getVmFromVmout() ([]string, error){
 	}
 	var vms []string
 	strs := strings.Split(string(content), "\n")
+	for _, s := range strs {
+		if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
+			vms = append(vms, strings.TrimSpace(s))
+		}
+	}
+
+	content, err = ioutil.ReadFile("vmHalfOut.txt")
+	if err != nil {
+		return []string{}, err
+	}
+	strs = strings.Split(string(content), "\n")
 	for _, s := range strs {
 		if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
 			vms = append(vms, strings.TrimSpace(s))

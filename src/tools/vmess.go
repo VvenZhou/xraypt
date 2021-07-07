@@ -80,6 +80,8 @@ func VmFillVmShare(vmShareP *VmessShare, vmLink string) {
 	err := json.Unmarshal(data, &i)
 	if err != nil {
 		log.Println(err)
+		log.Println("error link:", vmLink)
+		return
 	}
 	m := i.(map[string]interface{})
 
