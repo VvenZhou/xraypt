@@ -101,6 +101,10 @@ func main() {
 			log.Println("vmHalfOut generated!")
 		}
 	}
+
+	os.RemoveAll(tools.TempPath)
+	os.MkdirAll(tools.TempPath, 0755)
+
 	os.Exit(0)
 
 
