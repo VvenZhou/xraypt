@@ -78,10 +78,10 @@ func GVarInit(port int){
 }
 
 func DirInit(){
-	if _, err := os.Stat(JitPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		os.MkdirAll(JitPath, 0755)
-	}
+	//if _, err := os.Stat(JitPath); os.IsNotExist(err) {
+	//	// path/to/whatever does not exist
+	//	os.MkdirAll(JitPath, 0755)
+	//}
 	if _, err := os.Stat(TempPath); os.IsNotExist(err) {
 		// path/to/whatever does not exist
 		os.MkdirAll(TempPath, 0755)
@@ -90,10 +90,10 @@ func DirInit(){
 		// path/to/whatever does not exist
 		os.MkdirAll(BackupPath, 0755)
 	}
-	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		os.MkdirAll(JsonsPath, 0755)
-	}
+	//if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
+	//	// path/to/whatever does not exist
+	//	os.MkdirAll(JsonsPath, 0755)
+	//}
 	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
 		// path/to/whatever does not exist
 		os.MkdirAll(HalfJsonsPath, 0755)
