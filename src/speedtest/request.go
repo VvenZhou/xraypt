@@ -20,7 +20,7 @@ type uploadFunc func(context.Context, string, int) error
 
 var dlSizes = [...]int{350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000}
 var ulSizes = [...]int{100, 300, 500, 800, 1000, 1500, 2500, 3000, 3500, 4000} //kB
-var client = http.Client{}
+//var Client = http.Client{}
 
 // DownloadTest executes the test to measure download speed
 func (s *Server) DownloadTest(savingMode bool) error {
@@ -185,7 +185,7 @@ func dlWarmUp(ctx context.Context, dlURL string) error {
 		return err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func ulWarmUp(ctx context.Context, ulURL string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := client.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func downloadRequest(ctx context.Context, dlURL string, w int) error {
 		return err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func uploadRequest(ctx context.Context, ulURL string, w int) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := client.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return err
 	}

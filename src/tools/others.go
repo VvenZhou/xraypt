@@ -49,10 +49,11 @@ func (a ByDelay) Len() int           { return len(a) }
 func (a ByDelay) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
-func (n *Node) Init(id string, shareLink string, port int) {
+//func (n *Node) Init(id string, shareLink string, port int) {
+func (n *Node) Init(id string, shareLink string) {
 	n.Id = id
 	n.ShareLink = shareLink
-	n.Port = port
+	//n.Port = port
 }
 
 func (n *Node) CreateJson(dirPath string) {

@@ -35,7 +35,8 @@ func FetchUserInfoContext(ctx context.Context) (*User, error) {
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	//resp, err := http.DefaultClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -42,7 +42,7 @@ const PRealTimeout = time.Duration(pRealT*2) * time.Millisecond
 const STimeout = time.Duration(sT) * time.Millisecond
 const SubTimeout = time.Duration(subT) * time.Millisecond
 
-func Init(preProxyPort int) {
+func PreCheck(preProxyPort int) {
 	GVarInit(preProxyPort)
 	DirInit()
 }
@@ -100,14 +100,14 @@ func DirInit(){
 	}
 }
 
-func HttpClientGet(port int, timeout time.Duration) *http.Client {
+func HttpClientGet(port int, timeout time.Duration) http.Client {
 	if port == 0 {
-		myClient := &http.Client{}
+		myClient := http.Client{}
 		return myClient
 	}else{
 		str := []string{"http://127.0.0.1", strconv.Itoa(port)}
 		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-		myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
+		myClient := http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
 		return myClient
 	}
 }

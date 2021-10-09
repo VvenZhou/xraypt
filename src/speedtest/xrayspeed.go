@@ -5,9 +5,12 @@ import (
 	"log"
 	"math"
 	"time"
+	"net/http"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
+
+var Client = http.Client{}
 
 
 func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node) {
@@ -25,10 +28,10 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<-*tools.Node){
 	defer wg.Done()
 	defer x.Stop()
 
-	myClient := tools.HttpClientGet(x.Port, tools.STimeout)
+	Client = tools.HttpClientGet(x.Port, tools.STimeout)
 
 	START:
-	user, err := FetchUserInfo(myClient)
+	user, err := FetchUserInfo()
 	if err != nil {
 		log.Println("[ERROR]", "Fetch user info:", err)
 		fail += 1
@@ -42,7 +45,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<-*tools.Node){
 	fail = 0
 
 	START_1:
-	serverList, err := FetchServerList(user, myClient)
+	serverList, err := FetchServerList(user)
 	if err != nil {
 		log.Println("[ERROR]", "Fetch server list:", err)
 		fail += 1
@@ -76,13 +79,13 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<-*tools.Node){
 		if s.Country == "China" {
 			break
 		}
-		s.PingTest(myClient)
-		s.DownloadTest(false, myClient)
+		s.PingTest()
+		s.DownloadTest(false)
 		if s.DLSpeed < tools.DSLine {
 			log.Println("DownSpeed too slow, skipped.")
 			break
 		}
-		s.UploadTest(false, myClient)
+		s.UploadTest(false)
 
 		(*node).Country = s.Country
 		(*node).DLSpeed = math.Round(s.DLSpeed*100)/100

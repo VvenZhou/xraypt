@@ -25,7 +25,7 @@ var protocols = []string{
 	"trojan"}
 
 func main() {
-	tools.Init(8123)
+	tools.PreCheck(8123)
 	//os.Exit(0)
 
 	//vless := []byte("vless://bdc07b5f-dd93-4c29-8fcf-25327ac2a55a@v2rayge1.free3333.xyz:443?encryption=none&security=tls&type=ws&host=v2rayge1.free3333.xyz&path=%2fray#https%3a%2f%2fgithub.com%2fAlvin9999%2fnew-pac%2fwiki%2bVLESS%e5%be%b7%e5%9b%bdi")
@@ -45,27 +45,28 @@ func main() {
 	var ports []int
 	var vmLinks []string
 	vmLinks = tools.SubGet(protocols, subs)
-
-	ports, err = tools.GetFreePorts(len(vmLinks))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
 	pingJob := make(chan *tools.Node, len(vmLinks))
 	pingResult := make(chan *tools.Node, len(vmLinks))
 
+	ports, err = tools.GetFreePorts(tools.PThreadNum)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for i, s := range vmLinks {
 		var n tools.Node
-		n.Init(strconv.Itoa(i), s, ports[i])
-		n.CreateJson(tools.TempPath)
+		//n.Init(strconv.Itoa(i), s, ports[i])
+		n.Init(strconv.Itoa(i), s)
+		//n.CreateJson(tools.TempPath)
 
 		pingJob <- &n
 		wgPing.Add(1)
 	}
 	for i := 1; i <= tools.PThreadNum; i++ {
-		go ping.XrayPing(&wgPing, pingJob, pingResult)
+		// TODO: using fixed ports instead of individuals of each vmlink.
+		go ping.XrayPing(&wgPing, pingJob, pingResult, ports[i-1])
 	}
 	close(pingJob)
 

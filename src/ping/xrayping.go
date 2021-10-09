@@ -13,12 +13,14 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node) {
+func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
+	fixedPort := port
 	for n := range jobs {
-		port := n.Port
-
 		var x tools.Xray
-		err := x.Init(port, (*n).JsonPath)
+
+		n.Port = fixedPort
+		n.CreateJson(tools.TempPath)
+		err := x.Init(fixedPort, (*n).JsonPath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -81,13 +83,13 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 		END:
 		err = x.Stop()
 		if err != nil {
-		log.Fatal(err)
+			log.Fatal(err)
 		}
 		wg.Done()
 	}
 }
 
-func Ping(myClient *http.Client, url string, cookies []*http.Cookie, pReal bool) (int, int, []*http.Cookie, error){
+func Ping(myClient http.Client, url string, cookies []*http.Cookie, pReal bool) (int, int, []*http.Cookie, error){
 	var coo []*http.Cookie
 
 	req, _ := http.NewRequest("GET", url, nil)
