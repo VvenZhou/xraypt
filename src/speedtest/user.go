@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 )
 
 const speedTestConfigUrl = "https://www.speedtest.net/speedtest-config.php"
@@ -36,6 +37,8 @@ func FetchUserInfoContext(ctx context.Context) (*User, error) {
 	}
 
 	//resp, err := http.DefaultClient.Do(req)
+	//resp, err := Client.Do(req)
+	Client := M[os.Getpid()]
 	resp, err := Client.Do(req)
 	if err != nil {
 		return nil, err

@@ -6,29 +6,38 @@ import (
 	"math"
 	"time"
 	"net/http"
+	"os"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-var Client = http.Client{}
+//var Client http.Client
+var M = make(map[int]http.Client)
 
+func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
+	
+	fixedPort := port
+	Client := tools.HttpClientGet(fixedPort, tools.STimeout)
+	M[os.Getpid()] = Client
 
-func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node) {
 	for node := range jobs {
 		log.Println("Speed: start testing!")
-		doTest(wg, node, result)
+		doTest(wg, node, result, fixedPort)
 	}
 }
 
-func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<-*tools.Node){
+func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, port int){
 	var x tools.Xray
 	var fail int
-	x.Init((*node).Port, (*node).JsonPath)
+
+	fixedPort := port
+	node.Port = fixedPort
+	node.CreateJson(tools.TempPath)
+
+	x.Init(fixedPort, node.JsonPath)
 	x.Run()
 	defer wg.Done()
 	defer x.Stop()
-
-	Client = tools.HttpClientGet(x.Port, tools.STimeout)
 
 	START:
 	user, err := FetchUserInfo()
@@ -80,12 +89,12 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<-*tools.Node){
 			break
 		}
 		s.PingTest()
-		s.DownloadTest(false)
+		s.DownloadTest(true)
 		if s.DLSpeed < tools.DSLine {
 			log.Println("DownSpeed too slow, skipped.")
 			break
 		}
-		s.UploadTest(false)
+		s.UploadTest(true)
 
 		(*node).Country = s.Country
 		(*node).DLSpeed = math.Round(s.DLSpeed*100)/100

@@ -15,6 +15,9 @@ import (
 
 func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 	fixedPort := port
+	pClient := tools.HttpClientGet(fixedPort, tools.PTimeout)
+	pRealClient := tools.HttpClientGet(fixedPort, tools.PRealTimeout)
+
 	for n := range jobs {
 		var x tools.Xray
 
@@ -28,9 +31,6 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		pClient := tools.HttpClientGet(x.Port, tools.PTimeout)
-		pRealClient := tools.HttpClientGet(x.Port, tools.PRealTimeout)
 
 		var cookie []*http.Cookie
 		var fail int = 0
@@ -98,7 +98,7 @@ func Ping(myClient http.Client, url string, cookies []*http.Cookie, pReal bool) 
 			req.AddCookie(cookies[i])
 		}
 		req.Close = true
-		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0i")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36")
 	}
 
 	start := time.Now()

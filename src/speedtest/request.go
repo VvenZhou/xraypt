@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -185,6 +186,7 @@ func dlWarmUp(ctx context.Context, dlURL string) error {
 		return err
 	}
 
+	Client := M[os.Getpid()]
 	resp, err := Client.Do(req)
 	if err != nil {
 		return err
@@ -205,6 +207,8 @@ func ulWarmUp(ctx context.Context, ulURL string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	Client := M[os.Getpid()]
 	resp, err := Client.Do(req)
 	if err != nil {
 		return err
@@ -223,6 +227,7 @@ func downloadRequest(ctx context.Context, dlURL string, w int) error {
 		return err
 	}
 
+	Client := M[os.Getpid()]
 	resp, err := Client.Do(req)
 	if err != nil {
 		return err
@@ -243,6 +248,7 @@ func uploadRequest(ctx context.Context, ulURL string, w int) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	Client := M[os.Getpid()]
 	resp, err := Client.Do(req)
 	if err != nil {
 		return err
@@ -271,7 +277,9 @@ func (s *Server) PingTestContext(ctx context.Context) error {
 			return err
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		//resp, err := http.DefaultClient.Do(req)
+		Client := M[os.Getpid()]
+		resp, err := Client.Do(req)
 		if err != nil {
 			return err
 		}

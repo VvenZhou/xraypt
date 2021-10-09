@@ -76,11 +76,15 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) {
 func VmFillVmShare(vmShareP *VmessShare, vmLink string) {
 	var i interface{}
 	headAndTail := strings.Split(vmLink, "vmess://")
-	data, _ := base64.StdEncoding.DecodeString(headAndTail[1])
-	err := json.Unmarshal(data, &i)
+	data, err := base64.StdEncoding.DecodeString(headAndTail[1])
 	if err != nil {
-		log.Println(err)
+		log.Println("base64 decode err:", err)
+		return
+	}
+	err = json.Unmarshal(data, &i)
+	if err != nil {
 		log.Println("error link:", vmLink)
+		log.Println(err)
 		return
 	}
 	m := i.(map[string]interface{})

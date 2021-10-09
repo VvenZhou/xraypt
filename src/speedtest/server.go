@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"os"
 )
 
 const speedTestServersUrl = "https://www.speedtest.net/speedtest-servers-static.php"
@@ -72,7 +73,9 @@ func FetchServerListContext(ctx context.Context, user *User) (ServerList, error)
 		return ServerList{}, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	//resp, err := http.DefaultClient.Do(req)
+	Client := M[os.Getpid()]
+	resp, err := Client.Do(req)
 	if err != nil {
 		return ServerList{}, err
 	}
@@ -85,7 +88,9 @@ func FetchServerListContext(ctx context.Context, user *User) (ServerList, error)
 			return ServerList{}, err
 		}
 
-		resp, err = http.DefaultClient.Do(req)
+		//resp, err = http.DefaultClient.Do(req)
+		Client := M[os.Getpid()]
+		resp, err = Client.Do(req)
 		if err != nil {
 			return ServerList{}, err
 		}

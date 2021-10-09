@@ -44,7 +44,10 @@ func main() {
 
 	var ports []int
 	var vmLinks []string
+
 	vmLinks = tools.SubGet(protocols, subs)
+	log.Println("Subs get done!")
+
 	var goodPingNodes []*tools.Node
 	var wgPing sync.WaitGroup
 	pingJob := make(chan *tools.Node, len(vmLinks))
@@ -65,7 +68,6 @@ func main() {
 		wgPing.Add(1)
 	}
 	for i := 1; i <= tools.PThreadNum; i++ {
-		// TODO: using fixed ports instead of individuals of each vmlink.
 		go ping.XrayPing(&wgPing, pingJob, pingResult, ports[i-1])
 	}
 	close(pingJob)
@@ -82,9 +84,9 @@ func main() {
 	}
 
 	sort.Stable(tools.ByDelay(goodPingNodes))
-	//for i, n := range goodPingNodes {
-	//	fmt.Println(i, n.AvgDelay)
-	//}
+	for i, n := range goodPingNodes {
+		fmt.Println(i, n.AvgDelay)
+	}
 
 	var halfGoodVmLinks []string
 	for i, n := range goodPingNodes {
@@ -106,10 +108,7 @@ func main() {
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
 
-	os.Exit(0)
-
-
-
+	//os.Exit(0)
 
 	var goodSpeedNodes []*tools.Node
 	var wgSpeed sync.WaitGroup
@@ -120,8 +119,14 @@ func main() {
 		speedJob <- n
 		wgSpeed.Add(1)
 	}
+
+	ports, err = tools.GetFreePorts(tools.SThreadNum)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for i := 1; i <= tools.SThreadNum; i++ {
-		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult)
+		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, ports[i-1])
 	}
 	close(speedJob)
 	wgSpeed.Wait()
@@ -132,21 +137,21 @@ func main() {
 	}
 
 	//var halfGoodVmLinks []string
-	for i, n := range goodPingNodes {
-		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
-		vmOutStr := strings.Join(str, "")
-		halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
-	}
-	if len(halfGoodVmLinks) != 0 {
-		bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
-		err := os.WriteFile("vmHalfOut.txt", bytes, 0644)
-		if err != nil {
-			log.Println(err)
-		}else{
-			log.Println("vmHalfOut generated!")
-		}
-	}
+	//for i, n := range goodPingNodes {
+	//	n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
+	//	str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
+	//	vmOutStr := strings.Join(str, "")
+	//	halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
+	//}
+	//if len(halfGoodVmLinks) != 0 {
+	//	bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
+	//	err := os.WriteFile("vmHalfOut.txt", bytes, 0644)
+	//	if err != nil {
+	//		log.Println(err)
+	//	}else{
+	//		log.Println("vmHalfOut generated!")
+	//	}
+	//}
 
 	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDelay(goodSpeedNodes))

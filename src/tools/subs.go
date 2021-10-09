@@ -132,7 +132,9 @@ func SubGet(protocols []string, subs []string) []string {
 		}
 	}
 
+	log.Println("start remove duplicates...")
 	subLs.vms = VmRemoveDulpicate(subLs.vms)
+	log.Println("remove duplicates done...")
 
 	if flagVm {
 		log.Println("get vms:", len(subLs.vms))

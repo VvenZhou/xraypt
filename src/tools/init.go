@@ -21,20 +21,20 @@ var XrayPath string
 var SubsFilePath string
 
 
-const PThreadNum = 150
-const SThreadNum = 4
-const DSLine = 2.0
+const PThreadNum = 200
+const SThreadNum = 5
+const DSLine = 4.0
 
-const PCnt = 7
-const PingAllowFail = 5
+const PCnt = 5
+const PingAllowFail = 3
 
-const PRealCnt = 3
+const PRealCnt = 5
 const PRealAllowFail = 2
 
 
 const subT = 5000
-const pT = 5000 //ms
-const pRealT = 2000 //ms
+const pT = 2000 //ms
+const pRealT = 1000 //ms
 const sT = 10000 //ms
 
 const PTimeout = time.Duration(pT*2) * time.Millisecond
