@@ -15,7 +15,8 @@ import (
 
 type Node struct {
 	Id        string
-	ShareLink string
+	Type	string		// "vmess", "vless", etc.
+	ShareLink string 	//without head("vmess://")
 	JsonPath  string
 	AvgDelay  int
 	Country   string
@@ -49,20 +50,25 @@ func (a ByDelay) Len() int           { return len(a) }
 func (a ByDelay) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
-//func (n *Node) Init(id string, shareLink string, port int) {
-func (n *Node) Init(id string, shareLink string) {
+func (n *Node) Init(id, ntype, shareLink string) {
 	n.Id = id
+	n.Type = ntype
 	n.ShareLink = shareLink
-	//n.Port = port
 }
 
 func (n *Node) CreateJson(dirPath string) {
-	var vmout Outbound
 	var con Config
-	VmLinkToVmOut(&vmout, n.ShareLink)
-	OutToConfig(&con, vmout)
+	switch n.Type{
+		case "vmess": 
+			var vmout Outbound
+			VmLinkToVmOut(&vmout, n.ShareLink)
+			OutboundToTestConfig(&con, vmout)
+			n.Con = &con
 
-	n.Con = &con
+		default :
+			log.Println("ERROR: unknown node type")
+			return 
+	}
 
 	out := uuid.New().String()
 	s := []string{dirPath, strings.TrimSpace(string(out)), ".json"}
@@ -85,9 +91,8 @@ func (n *Node) CreateJson(dirPath string) {
 }
 
 func (n *Node) CreateFinalJson(dirPath string, name string) {
-	ConfigFinal(n.Con)
+	GenFinalConfig(n.Con)
 
-	//s := []string{dirPath, n.Id, ".json"}
 	s := []string{dirPath, name, ".json"}
 	n.JsonPath = strings.Join(s, "")
 

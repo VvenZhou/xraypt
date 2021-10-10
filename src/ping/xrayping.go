@@ -71,16 +71,14 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 					//}
 				}
 			}
-			if !((tools.PRealCnt-success) <= tools.PRealAllowFail) {
-				goto END
-			}else{
+			if (tools.PRealCnt-success) <= tools.PRealAllowFail {
 				pRealAvgDelay = pRealTotalDelay / success
 				n.AvgDelay = pRealAvgDelay
 				log.Println("ping got one!", "delay:", pRealAvgDelay)
 				result <- n
 			}
 		}
-		END:
+
 		err = x.Stop()
 		if err != nil {
 			log.Fatal(err)

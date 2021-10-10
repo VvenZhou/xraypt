@@ -1,11 +1,10 @@
 package tools
 
 import (
-	"strings"
 	"encoding/base64"
 	"encoding/json"
 	"strconv"
-	"log"
+	"fmt"
 )
 
 
@@ -32,17 +31,13 @@ type VmessUser struct {
 	Level int `json:"level, omitempty"`
 }
 
-func VmLinkToVmOut(vmess *Outbound, vmShareLink string) {
+func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 	var vmShare VmessShare
-	VmFillVmShare(&vmShare, vmShareLink)
-	//headAndTail := strings.Split(vmShareLink, "vmess://")
-	//data, _ := base64.StdEncoding.DecodeString(headAndTail[1])
-	//err := json.Unmarshal(data, &vmShare)
-	//if err != nil {
-	//	//return
-	//}
 
-	//var vmess VmessOut
+	err := vmlinkToVmshare(&vmShare, vmShareLink)
+	if err != nil {
+		return err
+	}
 
 	port, _ := strconv.Atoi(vmShare.Port)
 	aid, _ := strconv.Atoi(vmShare.Aid)
@@ -69,24 +64,26 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) {
 		(*vmess).StreamSettings.TlsSettings.ServerName = vmShare.Host
 		(*vmess).StreamSettings.TlsSettings.AllowInsecure = true
 	}
-	(*vmess).Mx.Enabled = true
-	//return vmess
+	(*vmess).Mx.Enabled = false
+
+	return nil
 }
 
-func VmFillVmShare(vmShareP *VmessShare, vmLink string) {
+func vmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
 	var i interface{}
-	headAndTail := strings.Split(vmLink, "vmess://")
-	data, err := base64.StdEncoding.DecodeString(headAndTail[1])
+
+	data, err := base64.StdEncoding.DecodeString(vmLink)
 	if err != nil {
-		//log.Println("base64 decode err:", err)
-	return
+		err = fmt.Errorf("ERROR: vmlinkToVmShare: base64Decode:", err)
+		return err
 	}
+
 	err = json.Unmarshal(data, &i)
 	if err != nil {
-		log.Println("error link:", vmLink)
-		log.Println(err)
-		return
+		err = fmt.Errorf("ERROR: vmlinkToVmShare: jsonUnmarshal:", err)
+		return err
 	}
+
 	m := i.(map[string]interface{})
 
 	vmShareP.Add = m["add"].(string)
@@ -115,31 +112,46 @@ func VmFillVmShare(vmShareP *VmessShare, vmLink string) {
 	if s, ok := m["tls"].(string); ok {
 		vmShareP.Tls = s
 	}
+
+	return nil
 }
 
 func VmRemoveDulpicate(vmLinks []string) []string {
+	var vmS VmessShare
 	var vmNoDup []string
 	var vmShare []*VmessShare
 	var flag bool
+
+	vmlinkToVmshare(&vmS, vmLinks[0])
+	vmNoDup = append(vmNoDup, vmLinks[0])
+	vmShare = append(vmShare, &vmS)
+
 	for _, vmL := range vmLinks{
+		var vmS2 VmessShare
 		flag = true
-		var vmS VmessShare
-		VmFillVmShare(&vmS, vmL)
-		if len(vmNoDup) == 0 {
-			vmNoDup = append(vmNoDup, vmL)
-			vmShare = append(vmShare, &vmS)
-			continue
-		}
+		vmlinkToVmshare(&vmS2, vmL)
 		for _, vm := range vmShare {
-			if (*vm) == vmS {
+			//if vmShareCompare(vm, &vmS2) {
+			if *vm == vmS2 {
 				flag = false
 				break
 			}
 		}
 		if flag {
 			vmNoDup = append(vmNoDup, vmL)
-			vmShare = append(vmShare, &vmS)
+			vmShare = append(vmShare, &vmS2)
 		}
 	}
 	return vmNoDup
+}
+
+//Not used, yet.
+func vmShareCompare(a, b *VmessShare) bool {
+
+	if a.Add == b.Add && a.Port == b.Port && a.Id == b.Id && a.Aid == b.Aid && 
+		a.Net == b.Net && a.Host == b.Host && a.Path == b.Path && a.Tls == b.Tls {
+		return true
+	}
+
+	return false
 }

@@ -96,7 +96,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 			//log.Println(err)
 		}
 		log.Println("s.Latency:", s.Latency)
-		err = s.DownloadTestContext(ctx, true)
+		err = s.DownloadTestContext(ctx, false)
 		if err != nil {
 			//log.Println(err)
 		}
@@ -107,12 +107,13 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 			}
 			break
 		}
-		s.UploadTestContext(ctx, true)
+
+		//s.UploadTestContext(ctx, false)
 		//s.UploadTest(true, ctx)
 
 		(*node).Country = s.Country
 		(*node).DLSpeed = math.Round(s.DLSpeed*100)/100
-		(*node).ULSpeed = math.Round(s.ULSpeed*100)/100
+		//(*node).ULSpeed = math.Round(s.ULSpeed*100)/100
 		result <- node
 		log.Println("Speed got one !")
 	}

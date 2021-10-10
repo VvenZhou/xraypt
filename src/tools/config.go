@@ -28,12 +28,6 @@ type Outbound struct {
 			Address string `json:"address"`
 			Port int `json:"port"`
 			Users []interface{} `json:"users"`
-			//Users []struct {
-			//	Id string `json:"id"`
-			//	AlterId int `json:"alterId, omitempty"`
-			//	Security string `json:"security"`
-			//	Level int `json:"level, omitempty"`
-			//} `json:"users"`
 		} `json:"vnext"`
 	} `json:"settings"`
 	Tag string `json:"tag"`
@@ -78,7 +72,7 @@ type HttpIn struct{
 }
 
 
-func ConfigFinal(con *Config) {
+func GenFinalConfig(con *Config) {
 
 	type Outbound struct{
 		Protocol string `json:"protocol"`
@@ -114,10 +108,7 @@ func ConfigFinal(con *Config) {
 	(*con).Outbounds = []interface{}{ preCon, o1, o2}
 }
 
-func OutToConfig(con *Config, vmOut Outbound ) {
-	//o2 := Outbound{ Protocol: "blackhole", Tag: "block"}
-
-	//r1 := RoutingRule{ Type: "field", Domain: []string{"geosite:category-ads-all"}, OutboundTag: "block"}
+func OutboundToTestConfig(con *Config, vmOut Outbound ) {
 
 	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: 8123, Protocol: "http"}
 	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}

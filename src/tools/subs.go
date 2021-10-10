@@ -37,28 +37,28 @@ func SubGet(protocols []string, subs []string) []string {
 		}
 	}else{
 		if flagVl {
-			Re := regexp.MustCompile(`(vless://.*)<br>`)
+			Re := regexp.MustCompile(`vless://(.*)<br>`)
 			strStr := Re.FindAllStringSubmatch(*pStr, -1)
 			for _, list := range strStr{
 				subLs.vlesses = append(subLs.vlesses, list[1])
 			}
 		}
 		if flagVm {
-			Re := regexp.MustCompile(`(vmess://.*)<br>`)
+			Re := regexp.MustCompile(`vmess://(.*)<br>`)
 			strStr := Re.FindAllStringSubmatch(*pStr, -1)
 			for _, list := range strStr{
 				subLs.vms = append(subLs.vms, list[1])
 			}
 		}
 		if flagSs{
-			Re := regexp.MustCompile(`(ss://.*)<br>`)
+			Re := regexp.MustCompile(`ss://(.*)<br>`)
 			strStr := Re.FindAllStringSubmatch(*pStr, -1)
 			for _, list := range strStr{
 				subLs.sses = append(subLs.sses, list[1])
 			}
 		}
 		if flagTrojan {
-			Re := regexp.MustCompile(`(trojan://.*)<br>`)
+			Re := regexp.MustCompile(`trojan://(.*)<br>`)
 			strStr := Re.FindAllStringSubmatch(*pStr, -1)
 			for _, list := range strStr{
 				subLs.trojans = append(subLs.trojans, list[1])
@@ -80,28 +80,28 @@ func SubGet(protocols []string, subs []string) []string {
 			strs := strings.Fields(*pdata)
 			for _, s := range strs {
 				if flagVm {
-					if len(strings.Split(s, "vmess://")) == 2 {
-						subLs.vms = append(subLs.vms, s)
+					if l := strings.Split(s, "vmess://"); len(l)== 2 {
+						subLs.vms = append(subLs.vms, l[1])
 					}
 				}
 				if flagSs {
-					if len(strings.Split(s, "ss://")) == 2 {
-						subLs.sses = append(subLs.sses, s)
+					if l := strings.Split(s, "ss://"); len(l)== 2 {
+						subLs.sses = append(subLs.sses, l[1])
 					}
 				}
 				if flagTrojan {
-					if len(strings.Split(s, "trojan://")) == 2 {
-						subLs.trojans = append(subLs.trojans, s)
+					if l := strings.Split(s, "trojan://"); len(l)== 2 {
+						subLs.trojans = append(subLs.trojans, l[1])
 					}
 				}
 				if flagVl {
-					if len(strings.Split(s, "vless://")) == 2 {
-						subLs.vlesses = append(subLs.vlesses, s)
+					if l := strings.Split(s, "vless://"); len(l)== 2 {
+						subLs.vlesses = append(subLs.vlesses, l[1])
 					}
 				}
 				if flagSsr {
-					if len(strings.Split(s, "ssr://")) == 2 {
-						subLs.ssrs = append(subLs.ssrs, s)
+					if l := strings.Split(s, "ssr://"); len(l)== 2 {
+						subLs.ssrs = append(subLs.ssrs, l[1])
 					}
 				}
 			}
@@ -109,6 +109,8 @@ func SubGet(protocols []string, subs []string) []string {
 	}
 	if flagVm {
 		fail = 0
+
+		// Vms from YouNeedWind
 		START_YOU:
 		yousVms, err := getVmFromYou()
 		if err != nil {
@@ -119,21 +121,27 @@ func SubGet(protocols []string, subs []string) []string {
 			}
 		}else{
 			for _, vm := range yousVms {
-				subLs.vms = append(subLs.vms, strings.TrimSpace(vm))
+				l := strings.Split(strings.TrimSpace(vm), "vmess://")
+				subLs.vms = append(subLs.vms, l[1])
 			}
 		}
+
+		// Vms from Vmout
 		vmOutVms, err := getVmFromVmout()
 		if err != nil {
 			log.Println("[ERROR]: getVmFrom Vmout:", err)
 		}else{
 			for _, vm := range vmOutVms {
-				subLs.vms = append(subLs.vms, vm)
+				l := strings.Split(strings.TrimSpace(vm), "vmess://")
+				subLs.vms = append(subLs.vms, l[1])
 			}
 		}
 	}
 
 	log.Println("start remove duplicates...")
+	log.Println("befor:", len(subLs.vms))
 	subLs.vms = VmRemoveDulpicate(subLs.vms)
+	log.Println("after:", len(subLs.vms))
 	log.Println("remove duplicates done...")
 
 	if flagVm {

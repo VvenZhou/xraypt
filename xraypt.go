@@ -26,7 +26,9 @@ var protocols = []string{
 
 func main() {
 	tools.PreCheck(8123)
-	//os.Exit(0)
+
+	os.RemoveAll(tools.TempPath)
+	os.MkdirAll(tools.TempPath, 0755)
 
 	//vless := []byte("vless://bdc07b5f-dd93-4c29-8fcf-25327ac2a55a@v2rayge1.free3333.xyz:443?encryption=none&security=tls&type=ws&host=v2rayge1.free3333.xyz&path=%2fray#https%3a%2f%2fgithub.com%2fAlvin9999%2fnew-pac%2fwiki%2bVLESS%e5%be%b7%e5%9b%bdi")
 	//var out tools.Outbound
@@ -60,9 +62,7 @@ func main() {
 
 	for i, s := range vmLinks {
 		var n tools.Node
-		//n.Init(strconv.Itoa(i), s, ports[i])
-		n.Init(strconv.Itoa(i), s)
-		//n.CreateJson(tools.TempPath)
+		n.Init(strconv.Itoa(i), "vmess", s)
 
 		pingJob <- &n
 		wgPing.Add(1)
@@ -91,7 +91,7 @@ func main() {
 	var halfGoodVmLinks []string
 	for i, n := range goodPingNodes {
 		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
+		str := []string{strconv.Itoa(i), "\n", n.Type, "://", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
 		vmOutStr := strings.Join(str, "")
 		halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
 	}
@@ -154,14 +154,14 @@ func main() {
 	//}
 
 	sort.Stable(tools.ByDelay(goodSpeedNodes))
-	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
+	//sort.Sort(tools.ByULSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {
 		fmt.Println(i, (*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 		//(*n).Id = strconv.Itoa(i)
 		n.CreateFinalJson(tools.JsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", (*n).ShareLink, "\nDelay:", strconv.Itoa((*n).AvgDelay), " Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
+		str := []string{strconv.Itoa(i), "\n", n.Type, "://", (*n).ShareLink, "\nDelay:", strconv.Itoa((*n).AvgDelay), " Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
 		vmOutStr := strings.Join(str, "")
 		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}
