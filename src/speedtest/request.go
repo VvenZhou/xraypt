@@ -9,28 +9,28 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"os"
+	//"os"
 
 	"golang.org/x/sync/errgroup"
 )
 
-type downloadWarmUpFunc func(context.Context, string) error
-type downloadFunc func(context.Context, string, int) error
-type uploadWarmUpFunc func(context.Context, string) error
-type uploadFunc func(context.Context, string, int) error
+type downloadWarmUpFunc func(context.Context, string, *http.Client) error
+type downloadFunc func(context.Context, string, int, *http.Client) error
+type uploadWarmUpFunc func(context.Context, string, *http.Client) error
+type uploadFunc func(context.Context, string, int, *http.Client) error
 
 var dlSizes = [...]int{350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000}
 var ulSizes = [...]int{100, 300, 500, 800, 1000, 1500, 2500, 3000, 3500, 4000} //kB
 //var Client = http.Client{}
 
 // DownloadTest executes the test to measure download speed
-func (s *Server) DownloadTest(savingMode bool) error {
-	return s.downloadTestContext(context.Background(), savingMode, dlWarmUp, downloadRequest)
+func (s *Server) DownloadTest(savingMode bool, client *http.Client) error {
+	return s.downloadTestContext(context.Background(), savingMode, dlWarmUp, downloadRequest, client)
 }
 
 // DownloadTestContext executes the test to measure download speed, observing the given context.
-func (s *Server) DownloadTestContext(ctx context.Context, savingMode bool) error {
-	return s.downloadTestContext(ctx, savingMode, dlWarmUp, downloadRequest)
+func (s *Server) DownloadTestContext(ctx context.Context, savingMode bool, client *http.Client) error {
+	return s.downloadTestContext(ctx, savingMode, dlWarmUp, downloadRequest, client)
 }
 
 func (s *Server) downloadTestContext(
@@ -38,6 +38,7 @@ func (s *Server) downloadTestContext(
 	savingMode bool,
 	dlWarmUp downloadWarmUpFunc,
 	downloadRequest downloadFunc,
+	client *http.Client,
 ) error {
 	dlURL := strings.Split(s.URL, "/upload.php")[0]
 	eg := errgroup.Group{}
@@ -46,7 +47,7 @@ func (s *Server) downloadTestContext(
 	sTime := time.Now()
 	for i := 0; i < 2; i++ {
 		eg.Go(func() error {
-			return dlWarmUp(ctx, dlURL)
+			return dlWarmUp(ctx, dlURL, client)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -85,7 +86,7 @@ func (s *Server) downloadTestContext(
 		sTime = time.Now()
 		for i := 0; i < workload; i++ {
 			eg.Go(func() error {
-				return downloadRequest(ctx, dlURL, weight)
+				return downloadRequest(ctx, dlURL, weight, client)
 			})
 		}
 		if err := eg.Wait(); err != nil {
@@ -102,26 +103,27 @@ func (s *Server) downloadTestContext(
 }
 
 // UploadTest executes the test to measure upload speed
-func (s *Server) UploadTest(savingMode bool) error {
-	return s.uploadTestContext(context.Background(), savingMode, ulWarmUp, uploadRequest)
+func (s *Server) UploadTest(savingMode bool, client *http.Client) error {
+	return s.uploadTestContext(context.Background(), savingMode, ulWarmUp, uploadRequest, client)
 }
 
 // UploadTestContext executes the test to measure upload speed, observing the given context.
-func (s *Server) UploadTestContext(ctx context.Context, savingMode bool) error {
-	return s.uploadTestContext(ctx, savingMode, ulWarmUp, uploadRequest)
+func (s *Server) UploadTestContext(ctx context.Context, savingMode bool, client *http.Client) error {
+	return s.uploadTestContext(ctx, savingMode, ulWarmUp, uploadRequest, client)
 }
 func (s *Server) uploadTestContext(
 	ctx context.Context,
 	savingMode bool,
 	ulWarmUp uploadWarmUpFunc,
 	uploadRequest uploadFunc,
+	client *http.Client,
 ) error {
 	// Warm up
 	sTime := time.Now()
 	eg := errgroup.Group{}
 	for i := 0; i < 2; i++ {
 		eg.Go(func() error {
-			return ulWarmUp(ctx, s.URL)
+			return ulWarmUp(ctx, s.URL, client)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -160,7 +162,7 @@ func (s *Server) uploadTestContext(
 		sTime = time.Now()
 		for i := 0; i < workload; i++ {
 			eg.Go(func() error {
-				return uploadRequest(ctx, s.URL, weight)
+				return uploadRequest(ctx, s.URL, weight, client)
 			})
 		}
 		if err := eg.Wait(); err != nil {
@@ -177,7 +179,7 @@ func (s *Server) uploadTestContext(
 	return nil
 }
 
-func dlWarmUp(ctx context.Context, dlURL string) error {
+func dlWarmUp(ctx context.Context, dlURL string, client *http.Client) error {
 	size := dlSizes[2]
 	xdlURL := dlURL + "/random" + strconv.Itoa(size) + "x" + strconv.Itoa(size) + ".jpg"
 
@@ -186,8 +188,8 @@ func dlWarmUp(ctx context.Context, dlURL string) error {
 		return err
 	}
 
-	Client := M[os.Getpid()]
-	resp, err := Client.Do(req)
+	//Client := M[os.Getpid()]
+	resp, err := (*client).Do(req)
 	if err != nil {
 		return err
 	}
@@ -196,7 +198,7 @@ func dlWarmUp(ctx context.Context, dlURL string) error {
 	return err
 }
 
-func ulWarmUp(ctx context.Context, ulURL string) error {
+func ulWarmUp(ctx context.Context, ulURL string, client *http.Client) error {
 	size := ulSizes[4]
 	v := url.Values{}
 	v.Add("content", strings.Repeat("0123456789", size*100-51))
@@ -208,8 +210,8 @@ func ulWarmUp(ctx context.Context, ulURL string) error {
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	Client := M[os.Getpid()]
-	resp, err := Client.Do(req)
+	//Client := M[os.Getpid()]
+	resp, err := (*client).Do(req)
 	if err != nil {
 		return err
 	}
@@ -218,7 +220,7 @@ func ulWarmUp(ctx context.Context, ulURL string) error {
 	return err
 }
 
-func downloadRequest(ctx context.Context, dlURL string, w int) error {
+func downloadRequest(ctx context.Context, dlURL string, w int, client *http.Client) error {
 	size := dlSizes[w]
 	xdlURL := dlURL + "/random" + strconv.Itoa(size) + "x" + strconv.Itoa(size) + ".jpg"
 
@@ -227,8 +229,8 @@ func downloadRequest(ctx context.Context, dlURL string, w int) error {
 		return err
 	}
 
-	Client := M[os.Getpid()]
-	resp, err := Client.Do(req)
+	//Client := M[os.Getpid()]
+	resp, err := (*client).Do(req)
 	if err != nil {
 		return err
 	}
@@ -237,7 +239,7 @@ func downloadRequest(ctx context.Context, dlURL string, w int) error {
 	return err
 }
 
-func uploadRequest(ctx context.Context, ulURL string, w int) error {
+func uploadRequest(ctx context.Context, ulURL string, w int, client *http.Client) error {
 	size := ulSizes[w]
 	v := url.Values{}
 	v.Add("content", strings.Repeat("0123456789", size*100-51))
@@ -248,8 +250,8 @@ func uploadRequest(ctx context.Context, ulURL string, w int) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	Client := M[os.Getpid()]
-	resp, err := Client.Do(req)
+	//Client := M[os.Getpid()]
+	resp, err := (*client).Do(req)
 	if err != nil {
 		return err
 	}
@@ -260,12 +262,12 @@ func uploadRequest(ctx context.Context, ulURL string, w int) error {
 }
 
 // PingTest executes test to measure latency
-func (s *Server) PingTest() error {
-	return s.PingTestContext(context.Background())
+func (s *Server) PingTest(client *http.Client) error {
+	return s.PingTestContext(context.Background(), client)
 }
 
 // PingTestContext executes test to measure latency, observing the given context.
-func (s *Server) PingTestContext(ctx context.Context) error {
+func (s *Server) PingTestContext(ctx context.Context, client *http.Client) error {
 	pingURL := strings.Split(s.URL, "/upload.php")[0] + "/latency.txt"
 
 	l := time.Duration(100000000000) // 10sec
@@ -278,8 +280,8 @@ func (s *Server) PingTestContext(ctx context.Context) error {
 		}
 
 		//resp, err := http.DefaultClient.Do(req)
-		Client := M[os.Getpid()]
-		resp, err := Client.Do(req)
+		//Client := M[os.Getpid()]
+		resp, err := (*client).Do(req)
 		if err != nil {
 			return err
 		}

@@ -20,13 +20,15 @@ func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *t
 	Client := tools.HttpClientGet(fixedPort, tools.STimeout)
 	M[os.Getpid()] = Client
 
+	client := tools.HttpClientGet(fixedPort, tools.STimeout)
+
 	for node := range jobs {
 		log.Println("Speed: start testing!")
-		doTest(wg, node, result, fixedPort)
+		doTest(wg, node, result, fixedPort, &client)
 	}
 }
 
-func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, port int){
+func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, port int, client *http.Client){
 	var x tools.Xray
 	var fail int
 
@@ -40,7 +42,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 	defer x.Stop()
 
 	START:
-	user, err := FetchUserInfo()
+	user, err := FetchUserInfo(client)
 	if err != nil {
 		log.Println("[ERROR]", "Fetch user info:", err)
 		fail += 1
@@ -54,7 +56,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 	fail = 0
 
 	START_1:
-	serverList, err := FetchServerList(user)
+	serverList, err := FetchServerList(user, client)
 	if err != nil {
 		log.Println("[ERROR]", "Fetch server list:", err)
 		fail += 1
@@ -88,13 +90,13 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if s.Country == "China" {
 			break
 		}
-		s.PingTest()
-		s.DownloadTest(true)
+		s.PingTest(client)
+		s.DownloadTest(false, client)
 		if s.DLSpeed < tools.DSLine {
 			log.Println("DownSpeed too slow, skipped.")
 			break
 		}
-		s.UploadTest(true)
+		s.UploadTest(false, client)
 
 		(*node).Country = s.Country
 		(*node).DLSpeed = math.Round(s.DLSpeed*100)/100
