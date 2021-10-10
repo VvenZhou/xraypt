@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"time"
-	//"os"
 )
 
 const speedTestServersUrl = "https://www.speedtest.net/speedtest-servers-static.php"
@@ -62,12 +61,12 @@ func (b ByDistance) Less(i, j int) bool {
 }
 
 // FetchServerList retrieves a list of available servers
-func FetchServerList(user *User, client *http.Client) (ServerList, error) {
-	return FetchServerListContext(context.Background(), user, client)
+func FetchServerList(user *User, ctx context.Context) (ServerList, error) {
+	return FetchServerListContext(ctx, user)
 }
 
 // FetchServerListContext retrieves a list of available servers, observing the given context.
-func FetchServerListContext(ctx context.Context, user *User, client *http.Client) (ServerList, error) {
+func FetchServerListContext(ctx context.Context, user *User) (ServerList, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, speedTestServersUrl, nil)
 	if err != nil {
 		return ServerList{}, err
@@ -75,6 +74,10 @@ func FetchServerListContext(ctx context.Context, user *User, client *http.Client
 
 	//resp, err := http.DefaultClient.Do(req)
 	//Client := M[os.Getpid()]
+	client := ctx.Value("client").(*http.Client)
+	if client == nil {
+		return ServerList{}, errors.New("FetchServerList error: no context found")
+	}
 	resp, err := (*client).Do(req)
 	if err != nil {
 		return ServerList{}, err

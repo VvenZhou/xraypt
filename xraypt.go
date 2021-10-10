@@ -153,8 +153,8 @@ func main() {
 	//	}
 	//}
 
-	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDelay(goodSpeedNodes))
+	sort.Sort(tools.ByULSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {

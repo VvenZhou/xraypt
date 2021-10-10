@@ -78,8 +78,8 @@ func VmFillVmShare(vmShareP *VmessShare, vmLink string) {
 	headAndTail := strings.Split(vmLink, "vmess://")
 	data, err := base64.StdEncoding.DecodeString(headAndTail[1])
 	if err != nil {
-		log.Println("base64 decode err:", err)
-		return
+		//log.Println("base64 decode err:", err)
+	return
 	}
 	err = json.Unmarshal(data, &i)
 	if err != nil {

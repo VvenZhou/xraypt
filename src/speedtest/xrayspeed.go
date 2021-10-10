@@ -5,30 +5,33 @@ import (
 	"log"
 	"math"
 	"time"
-	"net/http"
-	"os"
+	"context"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
 //var Client http.Client
-var M = make(map[int]http.Client)
+//var M = make(map[int]http.Client)
 
 func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 	
 	fixedPort := port
-	Client := tools.HttpClientGet(fixedPort, tools.STimeout)
-	M[os.Getpid()] = Client
-
 	client := tools.HttpClientGet(fixedPort, tools.STimeout)
+	//M[os.Getpid()] = Client
+
+	ctx := context.WithValue(context.Background(), "client", &client)
+	//client := tools.HttpClientGet(fixedPort, tools.STimeout)
 
 	for node := range jobs {
 		log.Println("Speed: start testing!")
-		doTest(wg, node, result, fixedPort, &client)
+
+		//ctxWithCancel, cancel := context.WithCancel(ctx)
+		doTest(wg, node, result, fixedPort, ctx)
+		//cancel()
 	}
 }
 
-func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, port int, client *http.Client){
+func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, port int, ctx context.Context){
 	var x tools.Xray
 	var fail int
 
@@ -42,7 +45,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 	defer x.Stop()
 
 	START:
-	user, err := FetchUserInfo(client)
+	user, err := FetchUserInfo(ctx)
 	if err != nil {
 		log.Println("[ERROR]", "Fetch user info:", err)
 		fail += 1
@@ -56,16 +59,14 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 	fail = 0
 
 	START_1:
-	serverList, err := FetchServerList(user, client)
+	serverList, err := FetchServerList(user, ctx)
 	if err != nil {
 		log.Println("[ERROR]", "Fetch server list:", err)
 		fail += 1
 		if fail >= 3 {
-			//x.Stop()
-			//wg.Done()
 			return
 		}else{
-			time.Sleep(5 * time.Second)
+			time.Sleep(3 * time.Second)
 			goto START_1
 		}
 	}
@@ -79,7 +80,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if fail >= 3 {
 			return
 		}else{
-			time.Sleep(5 * time.Second)
+			time.Sleep(3 * time.Second)
 			goto START_2
 		}
 	}
@@ -90,13 +91,24 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if s.Country == "China" {
 			break
 		}
-		s.PingTest(client)
-		s.DownloadTest(false, client)
+		err = s.PingTest(ctx)
+		if err != nil {
+			//log.Println(err)
+		}
+		log.Println("s.Latency:", s.Latency)
+		err = s.DownloadTestContext(ctx, true)
+		if err != nil {
+			//log.Println(err)
+		}
+		//s.DownloadTest(true, ctx)
 		if s.DLSpeed < tools.DSLine {
-			log.Println("DownSpeed too slow, skipped.")
+			if s.DLSpeed != 0 {
+				log.Println("DownSpeed too slow, skipped:", s.DLSpeed)
+			}
 			break
 		}
-		s.UploadTest(false, client)
+		s.UploadTestContext(ctx, true)
+		//s.UploadTest(true, ctx)
 
 		(*node).Country = s.Country
 		(*node).DLSpeed = math.Round(s.DLSpeed*100)/100

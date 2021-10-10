@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	//"os"
 )
 
 const speedTestConfigUrl = "https://www.speedtest.net/speedtest-config.php"
@@ -25,12 +24,12 @@ type Users struct {
 }
 
 // FetchUserInfo returns information about caller determined by speedtest.net
-func FetchUserInfo(client *http.Client) (*User, error) {
-	return FetchUserInfoContext(context.Background(), client)
+func FetchUserInfo(ctx context.Context) (*User, error) {
+	return FetchUserInfoContext(ctx)
 }
 
 // FetchUserInfoContext returns information about caller determined by speedtest.net, observing the given context.
-func FetchUserInfoContext(ctx context.Context, client *http.Client) (*User, error) {
+func FetchUserInfoContext(ctx context.Context) (*User, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, speedTestConfigUrl, nil)
 	if err != nil {
 		return nil, err
@@ -41,6 +40,10 @@ func FetchUserInfoContext(ctx context.Context, client *http.Client) (*User, erro
 
 	//Client := M[os.Getpid()]
 	//resp, err := Client.Do(req)
+	client := ctx.Value("client").(*http.Client)
+	if client == nil {
+		return nil, errors.New("FetchUserInfo err, no context found")
+	}
 	resp, err := (*client).Do(req)
 	if err != nil {
 		return nil, err

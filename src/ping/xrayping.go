@@ -39,7 +39,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			_, code, _, err := Ping(pClient, "https://www.google.com/gen_204", nil, false)
 			if err != nil {
 				if code != 0 {
-					log.Println("ping error: code:", code, err)
+					//log.Println("ping error: code:", code, err)
 				}
 				fail += 1
 			}
@@ -53,10 +53,10 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 
 			for i := 0; i < tools.PRealCnt; i++{
 				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
-				delay, code, coo, err := Ping(pRealClient, "https://duckduckgo.com", cookie, true)
+				delay, _, coo, err := Ping(pRealClient, "https://duckduckgo.com", cookie, true)
 				//if err != nil && code != 429{
 				if err != nil {
-					log.Println("PingReal error: code:", code, err)
+					//log.Println("PingReal error: code:", code, err)
 					//time.Sleep(50*time.Millisecond)
 				}else{
 					//if len(coo) != 0 && len(cookie) == 0 {

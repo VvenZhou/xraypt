@@ -21,9 +21,9 @@ var XrayPath string
 var SubsFilePath string
 
 
-const PThreadNum = 200
-const SThreadNum = 5
-const DSLine = 4.0
+const PThreadNum = 250
+const SThreadNum = 10
+const DSLine = 2.0
 
 const PCnt = 5
 const PingAllowFail = 3
@@ -35,7 +35,7 @@ const PRealAllowFail = 2
 const subT = 5000
 const pT = 2000 //ms
 const pRealT = 1000 //ms
-const sT = 10000 //ms
+const sT = 20000 //ms
 
 const PTimeout = time.Duration(pT*2) * time.Millisecond
 const PRealTimeout = time.Duration(pRealT*2) * time.Millisecond
@@ -90,10 +90,10 @@ func DirInit(){
 		// path/to/whatever does not exist
 		os.MkdirAll(BackupPath, 0755)
 	}
-	//if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
-	//	// path/to/whatever does not exist
-	//	os.MkdirAll(JsonsPath, 0755)
-	//}
+	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		os.MkdirAll(JsonsPath, 0755)
+	}
 	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
 		// path/to/whatever does not exist
 		os.MkdirAll(HalfJsonsPath, 0755)
