@@ -35,5 +35,7 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 	if err != nil {
 		return err
 	}
+
+	//fmt.Printf("%v\n", con)
 	return nil
 }

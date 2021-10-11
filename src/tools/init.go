@@ -22,7 +22,7 @@ var SubsFilePath string
 
 
 const PThreadNum = 250
-const SThreadNum = 5
+const SThreadNum = 10
 const DSLine = 2.0
 
 const PCnt = 5
@@ -33,9 +33,9 @@ const PRealAllowFail = 2
 
 
 const subT = 5000
-const pT = 2000 //ms
+const pT = 1500 //ms
 const pRealT = 1000 //ms
-const sT = 30000 //ms
+const sT = 15000 //ms
 
 const PTimeout = time.Duration(pT*2) * time.Millisecond
 const PRealTimeout = time.Duration(pRealT*2) * time.Millisecond

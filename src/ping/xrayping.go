@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"errors"
 	"sync"
-	//"strconv"
-	//"strings"
-	//"net/url"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
@@ -37,6 +34,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 
 		for i := 0; i < tools.PCnt; i++ {
 			_, code, _, err := Ping(pClient, "https://www.google.com/gen_204", nil, false)
+			time.Sleep(time.Millisecond * 200)
 			if err != nil {
 				if code != 0 {
 					//log.Println("ping error: code:", code, err)
@@ -46,7 +44,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 		}
 
 		if fail <= tools.PingAllowFail {
-			log.Println("P good")
+			//log.Println("P good")
 			var pRealTotalDelay int
 			var pRealAvgDelay int
 			var success int
@@ -54,6 +52,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			for i := 0; i < tools.PRealCnt; i++{
 				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
 				delay, _, coo, err := Ping(pRealClient, "https://duckduckgo.com", cookie, true)
+				time.Sleep(time.Millisecond * 200)
 				//if err != nil && code != 429{
 				if err != nil {
 					//log.Println("PingReal error: code:", code, err)

@@ -52,7 +52,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if fail >= 3 {
 			return
 		}else{
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 			goto START
 		}
 	}
@@ -66,7 +66,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if fail >= 3 {
 			return
 		}else{
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 			goto START_1
 		}
 	}
@@ -80,7 +80,7 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if fail >= 3 {
 			return
 		}else{
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 			goto START_2
 		}
 	}
@@ -95,8 +95,9 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if err != nil {
 			//log.Println(err)
 		}
-		log.Println("s.Latency:", s.Latency)
-		err = s.DownloadTestContext(ctx, false)
+		//log.Println("s.Latency:", s.Latency)
+
+		err = s.DownloadTestContext(ctx, true)
 		if err != nil {
 			//log.Println(err)
 		}

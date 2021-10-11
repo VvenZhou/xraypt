@@ -9,6 +9,7 @@ import (
 	"strings"
 	"os"
 	"io/ioutil"
+	"time"
 
 	"github.com/VvenZhou/xraypt/src/ping"
 	"github.com/VvenZhou/xraypt/src/speedtest"
@@ -72,9 +73,14 @@ func main() {
 	}
 	close(pingJob)
 
-	log.Println("waitting for ping to be done...")
+	//os.Exit(1)
+
+	start := time.Now()
 	wgPing.Wait()
-	log.Println("ping finished")
+	stop := time.Now()
+	elapsed := stop.Sub(start)
+	timeOfPing := elapsed.Seconds()
+
 	goodPingCnt := len(pingResult)
 	log.Printf("There are %d good pings\n", goodPingCnt)
 
@@ -83,11 +89,12 @@ func main() {
 		goodPingNodes = append(goodPingNodes, n)
 	}
 
-	sort.Stable(tools.ByDelay(goodPingNodes))
+	//sort.Stable(tools.ByDelay(goodPingNodes))
 	for i, n := range goodPingNodes {
 		fmt.Println(i, n.AvgDelay)
 	}
 
+	//Generate halfGoodNodes
 	var halfGoodVmLinks []string
 	for i, n := range goodPingNodes {
 		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
@@ -110,6 +117,7 @@ func main() {
 
 	//os.Exit(0)
 
+	//Do speedtest
 	var goodSpeedNodes []*tools.Node
 	var wgSpeed sync.WaitGroup
 	speedJob := make(chan *tools.Node, goodPingCnt)
@@ -127,9 +135,17 @@ func main() {
 
 	for i := 1; i <= tools.SThreadNum; i++ {
 		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, ports[i-1])
+		//go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, ports[0])
+		time.Sleep(time.Second * 3)
 	}
 	close(speedJob)
+
+	start = time.Now()
 	wgSpeed.Wait()
+	stop = time.Now()
+	elapsed = stop.Sub(start)
+	timeOfSpeedTest := elapsed.Seconds()
+
 	goodSpeeds := len(speedResult)
 	for i := 1; i <= goodSpeeds; i++ {
 		n := <-speedResult
@@ -174,6 +190,10 @@ func main() {
 			log.Println("vmOut generated!")
 		}
 	}
+
+	log.Println("-------------------")
+	log.Println("Ping spent", timeOfPing, "s...")
+	log.Println("Speedtest spent", timeOfSpeedTest, "s...")
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)

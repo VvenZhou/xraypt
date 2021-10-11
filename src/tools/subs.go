@@ -67,6 +67,8 @@ func SubGet(protocols []string, subs []string) []string {
 	}
 	for _, sub := range subs {
 		fail = 0
+
+		//Sublink
 		START_SUBLINK:
 		pdata, err := getStrFromSublink(sub)
 		if err != nil {
@@ -127,9 +129,19 @@ func SubGet(protocols []string, subs []string) []string {
 		}
 
 		// Vms from Vmout
-		vmOutVms, err := getVmFromVmout()
+		vmOutVms, err := getVmFromFile("vmOut.txt")
 		if err != nil {
-			log.Println("[ERROR]: getVmFrom Vmout:", err)
+			log.Println("[ERROR]: getVmFrom vmOut.txt:", err)
+		}else{
+			for _, vm := range vmOutVms {
+				l := strings.Split(strings.TrimSpace(vm), "vmess://")
+				subLs.vms = append(subLs.vms, l[1])
+			}
+		}
+		// Vms from vmHalfOut.txt
+		vmOutVms, err = getVmFromFile("vmHalfOut.txt")
+		if err != nil {
+			log.Println("[ERROR]: getVmFrom vmHalfOut.txt:", err)
 		}else{
 			for _, vm := range vmOutVms {
 				l := strings.Split(strings.TrimSpace(vm), "vmess://")
@@ -319,24 +331,14 @@ func getStrFromSublink(subLink string) (*string, error) {
 	return &strData, nil
 }
 
-func getVmFromVmout() ([]string, error){
-	content, err := ioutil.ReadFile("vmOut.txt")
+func getVmFromFile(fileName string) ([]string, error){
+	//content, err := ioutil.ReadFile("vmOut.txt")
+	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return []string{}, err
 	}
 	var vms []string
 	strs := strings.Split(string(content), "\n")
-	for _, s := range strs {
-		if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
-			vms = append(vms, strings.TrimSpace(s))
-		}
-	}
-
-	content, err = ioutil.ReadFile("vmHalfOut.txt")
-	if err != nil {
-		return []string{}, err
-	}
-	strs = strings.Split(string(content), "\n")
 	for _, s := range strs {
 		if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
 			vms = append(vms, strings.TrimSpace(s))
