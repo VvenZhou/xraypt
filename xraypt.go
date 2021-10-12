@@ -152,26 +152,12 @@ func main() {
 		goodSpeedNodes = append(goodSpeedNodes, n)
 	}
 
-	//var halfGoodVmLinks []string
-	//for i, n := range goodPingNodes {
-	//	n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
-	//	str := []string{strconv.Itoa(i), "\n", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
-	//	vmOutStr := strings.Join(str, "")
-	//	halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
-	//}
-	//if len(halfGoodVmLinks) != 0 {
-	//	bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
-	//	err := os.WriteFile("vmHalfOut.txt", bytes, 0644)
-	//	if err != nil {
-	//		log.Println(err)
-	//	}else{
-	//		log.Println("vmHalfOut generated!")
-	//	}
-	//}
-
+	//Sort Nodes
 	sort.Stable(tools.ByDelay(goodSpeedNodes))
 	//sort.Sort(tools.ByULSpeed(goodSpeedNodes))
 	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
+
+	//Generate vmOut.txt
 	var goodVmLinks []string
 	for i, n := range goodSpeedNodes {
 		fmt.Println(i, (*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
@@ -181,6 +167,7 @@ func main() {
 		vmOutStr := strings.Join(str, "")
 		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}
+
 	if len(goodVmLinks) != 0 {
 		bytes := []byte(strings.Join(goodVmLinks[:], "\n"))
 		err := os.WriteFile("vmOut.txt", bytes, 0644)

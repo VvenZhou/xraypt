@@ -28,8 +28,8 @@ const DSLine = 2.0
 const PCnt = 5
 const PingAllowFail = 3
 
-const PRealCnt = 5
-const PRealAllowFail = 2
+const PRealCnt = 8
+const PRealLeastNeeded = 5	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
 
 
 const subT = 5000
@@ -37,8 +37,8 @@ const pT = 1500 //ms
 const pRealT = 1000 //ms
 const sT = 15000 //ms
 
-const PTimeout = time.Duration(pT*2) * time.Millisecond
-const PRealTimeout = time.Duration(pRealT*2) * time.Millisecond
+const PTimeout = time.Duration(pT * 2) * time.Millisecond
+const PRealTimeout = time.Duration(pRealT * 2) * time.Millisecond
 const STimeout = time.Duration(sT) * time.Millisecond
 const SubTimeout = time.Duration(subT) * time.Millisecond
 

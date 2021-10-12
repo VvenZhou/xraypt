@@ -88,9 +88,9 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 
 	for _, s := range targets {
 		//if s.Country == "China" || s.Country == "Hong Kong"{
-		if s.Country == "China" {
-			break
-		}
+		//if s.Country == "China" {
+		//	break
+		//}
 		err = s.PingTest(ctx)
 		if err != nil {
 			//log.Println(err)
@@ -101,13 +101,12 @@ func doTest(wg *sync.WaitGroup, node *tools.Node, result chan<- *tools.Node, por
 		if err != nil {
 			//log.Println(err)
 		}
-		//s.DownloadTest(true, ctx)
-		if s.DLSpeed < tools.DSLine {
-			if s.DLSpeed != 0 {
-				log.Println("DownSpeed too slow, skipped:", s.DLSpeed)
-			}
-			break
-		}
+		//if s.DLSpeed < tools.DSLine {
+		//	if s.DLSpeed != 0 {
+		//		log.Println("DownSpeed too slow, skipped:", s.DLSpeed)
+		//	}
+		//	break
+		//}
 
 		//s.UploadTestContext(ctx, false)
 		//s.UploadTest(true, ctx)

@@ -45,9 +45,10 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 
 		if fail <= tools.PingAllowFail {
 			//log.Println("P good")
-			var pRealTotalDelay int
+			//var pRealTotalDelay int
 			var pRealAvgDelay int
-			var success int
+			//var success int
+			var pRealDelayList []int
 
 			for i := 0; i < tools.PRealCnt; i++{
 				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
@@ -63,15 +64,22 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 						cookie = coo
 					}
 					//log.Println(delay)
-					pRealTotalDelay += delay
-					success += 1
+					//pRealTotalDelay += delay
+					pRealDelayList = append(pRealDelayList, delay)
+					//success += 1
 					//if success >= 5 {
 					//	break
 					//}
 				}
 			}
-			if (tools.PRealCnt-success) <= tools.PRealAllowFail {
-				pRealAvgDelay = pRealTotalDelay / success
+			//if (tools.PRealCnt-success) <= tools.PRealAllowFail {
+			//	pRealAvgDelay = pRealTotalDelay / success
+			//	n.AvgDelay = pRealAvgDelay
+			//	log.Println("ping got one!", "delay:", pRealAvgDelay)
+			//	result <- n
+			//}
+			if len(pRealDelayList) >= tools.PRealLeastNeeded {
+				pRealAvgDelay = getAvg(pRealDelayList)
 				n.AvgDelay = pRealAvgDelay
 				log.Println("ping got one!", "delay:", pRealAvgDelay)
 				result <- n
@@ -113,11 +121,29 @@ func Ping(myClient http.Client, url string, cookies []*http.Cookie, pReal bool) 
 	}
 
 	elapsed := stop.Sub(start)
-	delay := elapsed.Milliseconds()/2
+	delay := elapsed.Milliseconds() / 2
 	if pReal {
 		coo = resp.Cookies()
 		return int(delay), code, coo, nil
 	}else{
 		return int(delay), code, nil, nil
 	}
+}
+
+func getAvg(list []int) int {
+	var min, max, total int
+	max = list[0]
+	min = list[0]
+
+	for _, i := range list {
+		if i > max {
+			max = i
+		}
+		if i < min {
+			min = i
+		}
+		total += i
+	}
+
+	return int((total - max - min) / (len(list) - 2 ))
 }

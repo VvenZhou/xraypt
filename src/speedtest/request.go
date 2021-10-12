@@ -287,7 +287,6 @@ func (s *Server) PingTestContext(ctx context.Context) error {
 
 	l := time.Duration(100000000000) // 10sec
 	for i := 0; i < 3; i++ {
-		sTime := time.Now()
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, pingURL, nil)
 		if err != nil {
@@ -300,6 +299,8 @@ func (s *Server) PingTestContext(ctx context.Context) error {
 		if client == nil {
 			return errors.New("PingTest err, no context found")
 		}
+
+		sTime := time.Now()
 		resp, err := (*client).Do(req)
 		if err != nil {
 			return err
