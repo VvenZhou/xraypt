@@ -50,8 +50,8 @@ func (a ByDelay) Len() int           { return len(a) }
 func (a ByDelay) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
-func (n *Node) Init(id, ntype, shareLink string) {
-	n.Id = id
+func (n *Node) Init(ntype, shareLink string) {
+	//n.Id = id
 	n.Type = ntype
 	n.ShareLink = shareLink
 }
@@ -64,6 +64,12 @@ func (n *Node) CreateJson(dirPath string) {
 			VmLinkToVmOut(&vmout, n.ShareLink)
 			OutboundToTestConfig(&con, vmout)
 			n.Con = &con
+		case "ss":
+			var ssout Outbound
+			SSLinkToSSout(&ssout, n.ShareLink)
+			OutboundToTestConfig(&con, ssout)
+			n.Con = &con
+			//log.Println(con)
 
 		default :
 			log.Println("ERROR: unknown node type")

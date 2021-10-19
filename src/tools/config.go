@@ -23,17 +23,18 @@ type Config struct{
 
 type Outbound struct {
 	Protocol string `json:"protocol"`
-	Settings struct {
-		Vnext []struct {
-			Address string `json:"address"`
-			Port int `json:"port"`
-			Users []interface{} `json:"users"`
-		} `json:"vnext"`
-	} `json:"settings"`
+	//Settings struct {
+	//	Vnext []struct {
+	//		Address string `json:"address"`
+	//		Port int `json:"port"`
+	//		Users []interface{} `json:"users"`
+	//	} `json:"vnext"`
+	//} `json:"settings"`
+	Settings interface{} `json:"settings"`
 	Tag string `json:"tag"`
 	StreamSettings struct {
-		Network string `json:"network"`
-		Security string `json:"security"`
+		Network string `json:"network,omitempty"`
+		Security string `json:"security,omitempty"`
 		TlsSettings struct {
 			ServerName string `json:"servername,omitempty"`
 			AllowInsecure bool `json:"allowInsecure,omitempty"`
@@ -46,7 +47,7 @@ type Outbound struct {
 			Header struct { Type string `json:"type,omitempty"`} `json:"header,omitempty"`
 		} `json:"tcpSettings,omitempty"`
 
-	} `json:"streamSettings"`
+	} `json:"streamSettings,omitempty"`
 	Mx struct {
 		Enabled bool `json:"enabled,omitempty"`
 	} `json:"mux,omitempty"`
@@ -108,14 +109,14 @@ func GenFinalConfig(con *Config) {
 	(*con).Outbounds = []interface{}{ preCon, o1, o2}
 }
 
-func OutboundToTestConfig(con *Config, vmOut Outbound ) {
+func OutboundToTestConfig(con *Config, out Outbound ) {
 
 	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: 8123, Protocol: "http"}
 	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
 	//var con Config
 	(*con).Log.Loglevel = "error"
 	(*con).Inbounds = []interface{}{ htIn, soIn }
-	(*con).Outbounds = []interface{}{ vmOut }
+	(*con).Outbounds = []interface{}{ out }
 	(*con).Dns.Servers = []interface{}{ "8.8.8.8", "1.1.1.1" }
 
 	(*con).Routing.DomainStrategy = "AsIs"

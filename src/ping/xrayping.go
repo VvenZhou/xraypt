@@ -81,7 +81,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 			if len(pRealDelayList) >= tools.PRealLeastNeeded {
 				pRealAvgDelay = getAvg(pRealDelayList)
 				n.AvgDelay = pRealAvgDelay
-				log.Println("ping got one!", "delay:", pRealAvgDelay)
+				log.Println("ping got one!", n.Type, "delay:", pRealAvgDelay)
 				result <- n
 			}
 		}

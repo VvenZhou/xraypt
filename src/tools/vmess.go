@@ -24,11 +24,29 @@ type VmessShare struct {
 	//Sni string `json:"sni"`
 }
 
-type VmessUser struct {
+//type VmessUser struct {
+//	Id string `json:"id"`
+//	AlterId int `json:"alterId, omitempty"`
+//	Security string `json:"security"`
+//	Level int `json:"level, omitempty"`
+//}
+
+type User_ struct {
 	Id string `json:"id"`
 	AlterId int `json:"alterId, omitempty"`
 	Security string `json:"security"`
 	Level int `json:"level, omitempty"`
+}
+
+type Vnext_ struct {
+	Address string `json:"address"`
+	Port int `json:"port"`
+	//Users []interface{} `json:"users"`
+	Users []User_ `json:"users"`
+}
+
+type VmessSettings struct {
+	Vnext []Vnext_ `json:"vnext"`
 }
 
 func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
@@ -41,30 +59,36 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 
 	port, _ := strconv.Atoi(vmShare.Port)
 	aid, _ := strconv.Atoi(vmShare.Aid)
-	user := VmessUser{Id: vmShare.Id, AlterId: aid,  Security: "auto", Level: 0}
+	user := User_{Id: vmShare.Id, AlterId: aid,  Security: "auto", Level: 0}
+	vnext := Vnext_ { Address: vmShare.Add, 
+			  Port: port,
+			  Users: []User_{ user },
+			}
+	vmSettings := VmessSettings { Vnext: []Vnext_{ vnext }}
 
-	(*vmess).Protocol = "vmess"
-	(*vmess).Settings.Vnext = []struct{Address string `json:"address"`; Port int `json:"port"`; Users []interface{} `json:"users"`}{{
-		Address: vmShare.Add,
-		Port: port,
-		Users: []interface{}{ user}}}
-	(*vmess).Tag = "proxy"
-	(*vmess).StreamSettings.TcpSettings.Header.Type = "none"
+	vmess.Protocol = "vmess"
+	vmess.Settings = vmSettings
+	//(*vmess).Settings.Vnext = []struct{Address string `json:"address"`; Port int `json:"port"`; Users []interface{} `json:"users"`}{{
+	//	Address: vmShare.Add,
+	//	Port: port,
+	//	Users: []interface{}{ user}}}
+	vmess.Tag = "proxy"
+	vmess.StreamSettings.TcpSettings.Header.Type = "none"
 	if vmShare.Net == "tcp" {
-		(*vmess).StreamSettings.Network = "tcp"
-		(*vmess).StreamSettings.TcpSettings.Header.Type = "none"
+		vmess.StreamSettings.Network = "tcp"
+		vmess.StreamSettings.TcpSettings.Header.Type = "none"
 	}
 	if vmShare.Net == "ws" {
-		(*vmess).StreamSettings.Network = "ws"
-		(*vmess).StreamSettings.WsSettings.Path = vmShare.Path
-		(*vmess).StreamSettings.WsSettings.Headers.Host = vmShare.Host
+		vmess.StreamSettings.Network = "ws"
+		vmess.StreamSettings.WsSettings.Path = vmShare.Path
+		vmess.StreamSettings.WsSettings.Headers.Host = vmShare.Host
 	}
 	if vmShare.Tls == "tls" {
-		(*vmess).StreamSettings.Security = "tls"
-		(*vmess).StreamSettings.TlsSettings.ServerName = vmShare.Host
-		(*vmess).StreamSettings.TlsSettings.AllowInsecure = true
+		vmess.StreamSettings.Security = "tls"
+		vmess.StreamSettings.TlsSettings.ServerName = vmShare.Host
+		vmess.StreamSettings.TlsSettings.AllowInsecure = true
 	}
-	(*vmess).Mx.Enabled = false
+	vmess.Mx.Enabled = false
 
 	return nil
 }

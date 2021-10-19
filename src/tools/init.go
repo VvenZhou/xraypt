@@ -21,7 +21,7 @@ var XrayPath string
 var SubsFilePath string
 
 
-const PThreadNum = 250
+var PThreadNum = 50
 const SThreadNum = 10
 const DSLine = 2.0
 
