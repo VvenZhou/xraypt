@@ -21,7 +21,7 @@ var XrayPath string
 var SubsFilePath string
 
 
-var PThreadNum = 50
+var PThreadNum = 150
 const SThreadNum = 10
 const DSLine = 2.0
 
@@ -33,7 +33,7 @@ const PRealLeastNeeded = 5	// Must be >= 3 due to the Avg algorithm(src/ping/xra
 
 
 const subT = 5000
-const pT = 1500 //ms
+const pT = 2000 //ms
 const pRealT = 1000 //ms
 const sT = 15000 //ms
 

@@ -21,13 +21,14 @@ type Links struct {
 }
 
 func SubGet(subLs *Links, protocols []string, subs []string) {
-	//var subLs Links
+	var fail int 
+	var links []string
 
 	flagVm, flagVl, flagSs, flagSsr, flagTrojan := checkProtocols(protocols)
 
-	var fail int = 0
+	// Get links from Freefq
 	START_FREEFQ:
-	pStr, err := getAllFromFreefq()
+	strLinks, err := getAllFromFreefq()
 	if err != nil {
 		log.Println("[ERROR]: Get from Freefq:", err)
 		fail += 1
@@ -35,43 +36,22 @@ func SubGet(subLs *Links, protocols []string, subs []string) {
 			goto START_FREEFQ
 		}
 	}else{
-		if flagVl {
-			Re := regexp.MustCompile(`>\s*vless://(.*)\s*<`)
-			strStr := Re.FindAllStringSubmatch(*pStr, -1)
-			for _, list := range strStr{
-				subLs.Vlesses = append(subLs.Vlesses, list[1])
-			}
-		}
-		if flagVm {
-			Re := regexp.MustCompile(`>\s*vmess://(.*)\s*<`)
-			strStr := Re.FindAllStringSubmatch(*pStr, -1)
-			for _, list := range strStr{
-				subLs.Vms = append(subLs.Vms, list[1])
-			}
-		}
-		if flagSs{
-			Re := regexp.MustCompile(`>\s*ss://(.*)\s*<`)
-			strStr := Re.FindAllStringSubmatch(*pStr, -1)
-			for _, list := range strStr{
-				//fmt.Println(list, "\n")
-				subLs.Sses = append(subLs.Sses, list[1])
-			}
-		}
-		if flagTrojan {
-			Re := regexp.MustCompile(`>\s*trojan://(.*)\s*<`)
-			strStr := Re.FindAllStringSubmatch(*pStr, -1)
-			for _, list := range strStr{
-				subLs.Trojans = append(subLs.Trojans, list[1])
-			}
+		if len(strLinks) != 0 {
+			links = append(links, strLinks...)
 		}
 	}
+
+	//for _, s := range links {
+	//	fmt.Println(s, "\n")
+	//}
+	//os.Exit(0)
 
 
 	//Sublink
 	for _, sub := range subs {
 		fail = 0
 		START_SUBLINK:
-		pdata, err := getStrFromSublink(sub)
+		strLinks, err := getStrFromSublink(sub)
 		if err != nil {
 			log.Println("[ERROR]", "SubGet:", sub, err)
 			fail += 1
@@ -79,54 +59,38 @@ func SubGet(subLs *Links, protocols []string, subs []string) {
 				goto START_SUBLINK
 			}
 		}else{
-			log.Println("SubString got!")
-			strs := strings.Fields(*pdata)
-			for _, s := range strs {
-				if flagVm {
-					//if l := strings.Split(s, "vmess://"); len(l)== 2 {
-					if strings.HasPrefix(s, "vmess://") {
-						l := strings.Split(s, "vmess://")
-						subLs.Vms = append(subLs.Vms, l[1])
-					}
-				}
-				if flagSs {
-					//if l := strings.Split(s, "ss://"); len(l)== 2 {
-					if strings.HasPrefix(s, "ss://") {
-						l := strings.Split(s, "ss://")
-						subLs.Sses = append(subLs.Sses, l[1])
-					}
-				}
-				if flagTrojan {
-					//if l := strings.Split(s, "trojan://"); len(l)== 2 {
-					if strings.HasPrefix(s, "trojan://") {
-						l := strings.Split(s, "trojan://")
-						subLs.Trojans = append(subLs.Trojans, l[1])
-					}
-				}
-				if flagVl {
-					//if l := strings.Split(s, "vless://"); len(l)== 2 {
-					if strings.HasPrefix(s, "vless://") {
-						l := strings.Split(s, "vless://")
-						subLs.Vlesses = append(subLs.Vlesses, l[1])
-					}
-				}
-				if flagSsr {
-					//if l := strings.Split(s, "ssr://"); len(l)== 2 {
-					if strings.HasPrefix(s, "ssr://") {
-						l := strings.Split(s, "ssr://")
-						subLs.Ssrs = append(subLs.Ssrs, l[1])
-					}
-				}
+			if len(strLinks) != 0 {
+				links = append(links, strLinks...)
+				log.Println("SubString got!")
 			}
 		}
 	}
 
+	// Links from speedOut
+	strLinks, err = getLinksFromFile("speedOut.txt")
+	if err != nil {
+		log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
+	}else{
+		if len(strLinks) != 0 {
+			links = append(links, strLinks...)
+			log.Println("speedOut got!")
+		}
+	}
+	// Links from pingOut
+	strLinks, err = getLinksFromFile("pingOut.txt")
+	if err != nil {
+		log.Println("[ERROR]: getVmFrom pingOut.txt:", err)
+	}else{
+		if len(strLinks) != 0 {
+			links = append(links, strLinks...)
+			log.Println("speedOut got!")
+		}
+	}
 
-
+	// Vms from YouNeedWind
 	if flagVm {
 		fail = 0
 
-		// Vms from YouNeedWind
 		START_YOU:
 		yousVms, err := getVmFromYou()
 		if err != nil {
@@ -137,60 +101,50 @@ func SubGet(subLs *Links, protocols []string, subs []string) {
 			}
 		}else{
 			for _, vm := range yousVms {
-				l := strings.Split(strings.TrimSpace(vm), "vmess://")
+				l := strings.Split(vm, "vmess://")
 				subLs.Vms = append(subLs.Vms, l[1])
 			}
 		}
 
-		// Vms from Vmout
-		vmOutVms, err := getVmFromFile("speedOut.txt")
-		if err != nil {
-			log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
-		}else{
-			for _, vm := range vmOutVms {
-				l := strings.Split(strings.TrimSpace(vm), "vmess://")
-				subLs.Vms = append(subLs.Vms, l[1])
-			}
-		}
-		// Vms from vmHalfOut.txt
-		vmOutVms, err = getVmFromFile("pingOut.txt")
-		if err != nil {
-			log.Println("[ERROR]: getVmFrom vmHalfOut.txt:", err)
-		}else{
-			for _, vm := range vmOutVms {
-				l := strings.Split(strings.TrimSpace(vm), "vmess://")
-				subLs.Vms = append(subLs.Vms, l[1])
-			}
-		}
 	}
 
+	//Dispatch links
+	for _, str := range links {
+		var s []string
+		if flagVm {
+			if strings.HasPrefix(str, "vmess://") {
+				s = strings.Split(str, "://")
+				subLs.Vms = append(subLs.Vms, s[1])
+			}
+		}
+		if flagVl {
+			if strings.HasPrefix(str, "vless://") {
+				s = strings.Split(str, "://")
+				subLs.Vlesses = append(subLs.Vlesses, s[1])
+			}
+		}
+		if flagSs {
+			if strings.HasPrefix(str, "ss://") {
+				s = strings.Split(str, "://")
+				subLs.Sses = append(subLs.Sses, s[1])
+			}
+		}
+		if flagSsr {
+			if strings.HasPrefix(str, "ssr://") {
+				s = strings.Split(str, "://")
+				subLs.Ssrs = append(subLs.Ssrs, s[1])
+			}
+		}
+		if flagTrojan{
+			if strings.HasPrefix(str, "trojan://") {
+				s = strings.Split(str, "://")
+				subLs.Trojans = append(subLs.Trojans, s[1])
+			}
+		}
+	}	
 
-	//TODO: read ss links from speedOut.txt and pingOut.txt
-	//if flagSs {
-	//	// Sses from Vmout
-	//	vmOutVms, err := getVmFromFile("speedOut.txt")
-	//	if err != nil {
-	//		log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
-	//	}else{
-	//		for _, vm := range vmOutVms {
-	//			l := strings.Split(strings.TrimSpace(vm), "vmess://")
-	//			subLs.Vms = append(subLs.Vms, l[1])
-	//		}
-	//	}
-	//	// Sses from vmHalfOut.txt
-	//	vmOutVms, err = getVmFromFile("pingOut.txt")
-	//	if err != nil {
-	//		log.Println("[ERROR]: getVmFrom vmHalfOut.txt:", err)
-	//	}else{
-	//		for _, vm := range vmOutVms {
-	//			l := strings.Split(strings.TrimSpace(vm), "vmess://")
-	//			subLs.Vms = append(subLs.Vms, l[1])
-	//		}
-	//	}
-	//}
 
-
-
+	//Remove duplicates
 	log.Println("start remove duplicates...")
 	if flagVm && len(subLs.Vms)!=0 {
 		log.Printf("vm befor: %d    ", len(subLs.Vms))
@@ -205,6 +159,8 @@ func SubGet(subLs *Links, protocols []string, subs []string) {
 	log.Println("remove duplicates done...")
 
 
+
+	//Show total counts
 	if flagVm {
 		log.Println("get Vms:", len(subLs.Vms))
 	}
@@ -221,8 +177,6 @@ func SubGet(subLs *Links, protocols []string, subs []string) {
 		log.Println("get trojans:", len(subLs.Trojans))
 	}
 
-	//return subLs.vms
-	//return &subLs
 }
 
 func getVmFromYou() ([]string, error) {
@@ -299,7 +253,8 @@ func getVmFromYou() ([]string, error) {
 	return vmes, nil
 }
 
-func getAllFromFreefq() (*string, error) {
+func getAllFromFreefq() ([]string, error) {
+	//Get content from website
 	log.Println("Freefq fetching start...")
 	var cookie []*http.Cookie
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
@@ -308,8 +263,6 @@ func getAllFromFreefq() (*string, error) {
 
 	resp, err := myClient.Do(req)
 	if err != nil {
-		//log.Println("fetch error!")
-		//return []string{}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -350,18 +303,26 @@ func getAllFromFreefq() (*string, error) {
 	req = HttpNewRequest(h3, cookie)
 	resp3, err := myClient.Do(req)
 	if err != nil {
-		//log.Println("fetch h2 error!")
-		//return []string{}
 		return nil, err
 	}
 	defer resp3.Body.Close()
 	contents, _ = ioutil.ReadAll(resp3.Body)
 	strContents := string(contents)
 	log.Println("Freefq fetching Done.")
-	return &strContents, nil
+
+	//Extract links from content
+	var links []string
+	for _, str := range strings.Fields(strContents) {
+		s := extractAvailableLink(str)
+		if s != "" {
+			links = append(links, s)
+		}
+	}
+
+	return links, nil
 }
 
-func getStrFromSublink(subLink string) (*string, error) {
+func getStrFromSublink(subLink string) ([]string, error) {
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
 	//myClient := HttpClientGet(0, SubTimeout)
 	req := HttpNewRequest(subLink)
@@ -378,23 +339,34 @@ func getStrFromSublink(subLink string) (*string, error) {
 		return nil, err
 	}
 	strData := string(byteData)
-	return &strData, nil
+
+
+	var links []string
+	strs := strings.Fields(strData)
+	for _, str := range strs {
+		s := extractAvailableLink(str)
+		if s != "" {
+			links = append(links, s)
+		}
+	}
+
+	return links, nil
 }
 
-func getVmFromFile(fileName string) ([]string, error){
-	//content, err := ioutil.ReadFile("vmOut.txt")
+func getLinksFromFile(fileName string) ([]string, error){
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return []string{}, err
 	}
-	var vms []string
-	strs := strings.Split(string(content), "\n")
-	for _, s := range strs {
-		if len(strings.Split(strings.TrimSpace(s), "vmess://")) == 2 {
-			vms = append(vms, strings.TrimSpace(s))
+	var links []string
+	strs := strings.Fields(string(content))
+	for _, str := range strs {
+		s := extractAvailableLink(str)
+		if s != "" {
+			links = append(links, s)
 		}
 	}
-	return vms, nil
+	return links, nil
 }
 
 func checkProtocols(protocols []string) (flagVm , flagVl, flagSs, flagSsr, flagTrojan bool) {
@@ -424,6 +396,36 @@ func checkProtocols(protocols []string) (flagVm , flagVl, flagSs, flagSsr, flagT
 		flagSsr = false
 	}
 	return
+}
+
+func extractAvailableLink(str string) string {
+	Re := regexp.MustCompile(`[!a-z]*?vless://([^<]*)\s*<*`)
+	strList := Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?vmess://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?ss://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?trojan://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?ssr://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+
+	return ""
 }
 
 func strInSlice(a string, list []string) bool {
