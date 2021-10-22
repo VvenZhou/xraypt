@@ -66,7 +66,10 @@ func (n *Node) CreateJson(dirPath string) {
 			n.Con = &con
 		case "ss":
 			var ssout Outbound
-			SSLinkToSSout(&ssout, n.ShareLink)
+			err := SSLinkToSSout(&ssout, n.ShareLink)
+			if err != nil {
+				log.Println("ERROR: CreateJson: SSLinkToSSout:", err)
+			}
 			OutboundToTestConfig(&con, ssout)
 			n.Con = &con
 			//log.Println(con)

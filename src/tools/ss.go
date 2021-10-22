@@ -1,11 +1,11 @@
 package tools
 
 import (
-	//"log"
 	"fmt"
 	"strings"
 	"strconv"
 	"encoding/base64"
+	"log"
 )
 
 type ssShare struct{
@@ -29,7 +29,11 @@ type ssSettings struct {
 
 func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
 	var ssSh ssShare
-	ssLinkToShare(&ssSh, ssShareLink)
+	err := ssLinkToShare(&ssSh, ssShareLink)
+	if err != nil {
+		err = fmt.Errorf("ssLinkToShare:", err)
+		return err
+	}
 
 	ser := server_ {
 		Addr: ssSh.addr,
@@ -52,33 +56,80 @@ func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
 }
 
 func ssLinkToShare(ssShareP *ssShare, ssShareLink string) error{
-	//log.Println(ssShareLink)
-	strList0 := strings.Split(ssShareLink, "@") 
-	strList1 := strings.Split(strList0[1], "#")
-	strList2 := strings.Split(strList1[0], ":")
+	var method, pwd, addr string
+	var port int
+	var err error
 
-	methAndPwd, err := base64.StdEncoding.DecodeString(strList0[0])
+	f := strings.Contains(ssShareLink, "@")
+	if f {
+		method, pwd, addr, port, err = linkToShareType0(ssShareLink)
+		if err != nil {
+			err = fmt.Errorf("linkToShareType0:", err)
+			return err
+		}
+	}else{
+		method, pwd, addr, port, err = linkToShareType1(ssShareLink)
+		if err != nil {
+			err = fmt.Errorf("linkToShareType1:", err)
+			return err
+		}
+	}
+
+	ssShareP.method = method
+	ssShareP.pwd = pwd
+	ssShareP.addr = addr
+	ssShareP.port = port
+
+	return nil
+}
+
+func linkToShareType0(link string) (string, string, string, int, error) {
+	base64AndAddrPortEmail := strings.Split(link, "@") 
+	addrPortAndEmail := strings.Split(base64AndAddrPortEmail[1], "#")
+	addrAndPort := strings.Split(addrPortAndEmail[0], ":")
+
+	methAndPwd, err := base64.StdEncoding.DecodeString(base64AndAddrPortEmail[0])
 	if err != nil {
 		err = fmt.Errorf("ERROR: vmlinkToVmShare: base64Decode:", err)
-		return err
+		return "", "", "", 0, err
 	}
 
 	strList3 := strings.Split(string(methAndPwd), ":")
 
-	ssShareP.method = strList3[0]
-	ssShareP.pwd = strList3[1]
-	ssShareP.addr = strList2[0]
+	method := strList3[0]
+	pwd := strList3[1]
+	addr := addrAndPort[0]
+	port, err := strconv.Atoi(addrAndPort[1])
+	if err != nil {
+		err = fmt.Errorf("strconv.Atoi:", err)
+		return "", "", "", 0, err
+	}
 
-	port,err := strconv.Atoi(strList2[1])
+	return method, pwd, addr, port, nil
+}
+
+func linkToShareType1(link string) (string, string, string, int, error) {
+	base64AndEmail := strings.Split(link, "#")
+	base64DecodedStr, err := base64.StdEncoding.DecodeString(base64AndEmail[0])
 	if err != nil {
 		err = fmt.Errorf("ERROR: vmlinkToVmShare: base64Decode:", err)
-		return err
+		return "", "", "", 0, err
 	}
-	ssShareP.port = port
 
-	//log.Println(ssShareP)
+	methPAndAddrP := strings.Split(string(base64DecodedStr), "@") 
+	methodAndPwd := strings.Split(methPAndAddrP[0], ":")
+	addrAndPort := strings.Split(methPAndAddrP[1], ":")
 
-	return nil
+	method := methodAndPwd[0]
+	pwd := methodAndPwd[1]
+	addr := addrAndPort[0]
+	port, err := strconv.Atoi(addrAndPort[1])
+	if err != nil {
+		err = fmt.Errorf("strconv.Atoi:", err)
+		return "", "", "", 0, err
+	}
+
+	return method, pwd, addr, port, nil
 }
 
 func SsRemoveDulpicate(ssLinks []string) []string {
@@ -87,7 +138,10 @@ func SsRemoveDulpicate(ssLinks []string) []string {
 	var ssShareList []*ssShare
 	var flag bool
 
-	ssLinkToShare(&ssS, ssLinks[0])
+	err := ssLinkToShare(&ssS, ssLinks[0])
+	if err != nil {
+		log.Println("ERROR: SsRemoveDup: ssLinkToShare:", err)
+	}
 	ssNoDup = append(ssNoDup, ssLinks[0])
 	ssShareList = append(ssShareList, &ssS)
 
