@@ -20,17 +20,25 @@ func XraySpeedTest(nodesIn []*tools.Node) ([]*tools.Node, float64, error) {
 	speedJob := make(chan *tools.Node, allLen)
 	speedResult := make(chan *tools.Node, allLen)
 
+	var threadNum int
+	if allLen < tools.SThreadNum {
+		threadNum = allLen
+	}else{
+		threadNum = tools.SThreadNum
+	}
+
+
 	for _, n := range nodesIn {
 		speedJob <- n
 		wgSpeed.Add(1)
 	}
 
-	ports, err := tools.GetFreePorts(tools.SThreadNum)
+	ports, err := tools.GetFreePorts(threadNum)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for i := 1; i <= tools.SThreadNum; i++ {
+	for i := 1; i <= threadNum; i++ {
 		go mySpeedTest(&wgSpeed, speedJob, speedResult, ports[i-1])
 		time.Sleep(time.Second * 3)
 	}

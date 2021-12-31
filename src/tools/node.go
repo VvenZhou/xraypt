@@ -4,11 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"net"
-	"os/exec"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -26,11 +22,6 @@ type Node struct {
 	Con       *Config
 }
 
-type Xray struct {
-	Port     int
-	JsonPath string
-	cmd      *exec.Cmd
-}
 
 type ByDLSpeed []*Node
 
@@ -121,61 +112,4 @@ func (n *Node) CreateFinalJson(dirPath string, name string) {
 	}
 }
 
-func (x *Xray) Init(port int, jsonPath string) error {
-	x.Port = port
-	x.JsonPath = jsonPath
-	return nil
-}
 
-func (x *Xray) Run() error {
-	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
-
-	err := x.cmd.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	time.Sleep(750 * time.Millisecond)
-	return nil
-}
-
-func (x *Xray) Stop() error {
-	err := x.cmd.Process.Signal(syscall.SIGTERM)
-
-	_, err = x.cmd.Process.Wait()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
-}
-
-func GetFreePorts(count int) ([]int, error) {
-	var ports []int
-	for i := 0; i < count; i++ {
-		addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-		if err != nil {
-			return nil, err
-		}
-
-		l, err := net.ListenTCP("tcp", addr)
-		if err != nil {
-			return nil, err
-		}
-		defer l.Close()
-		ports = append(ports, l.Addr().(*net.TCPAddr).Port)
-	}
-	return ports, nil
-}
-
-//func RemoveDuplicateStr(intSlice []string) []string {
-//	keys := make(map[string]bool)
-//	list := []string{}
-//
-//	for _, entry := range intSlice {
-//		if _, value := keys[entry]; !value {
-//			keys[entry] = true
-//			list = append(list, entry)
-//		}
-//	}
-//	return list
-//}
