@@ -10,10 +10,48 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-//var Client http.Client
-//var M = make(map[int]http.Client)
 
-func XraySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
+func XraySpeedTest(nodesIn []*tools.Node) ([]*tools.Node, float64, error) {
+	//Do speedtest
+	var nodesOut []*tools.Node
+	var wgSpeed sync.WaitGroup
+
+	allLen := len(nodesIn)
+	speedJob := make(chan *tools.Node, allLen)
+	speedResult := make(chan *tools.Node, allLen)
+
+	for _, n := range nodesIn {
+		speedJob <- n
+		wgSpeed.Add(1)
+	}
+
+	ports, err := tools.GetFreePorts(tools.SThreadNum)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 1; i <= tools.SThreadNum; i++ {
+		go mySpeedTest(&wgSpeed, speedJob, speedResult, ports[i-1])
+		time.Sleep(time.Second * 3)
+	}
+	close(speedJob)
+
+	start := time.Now()
+	wgSpeed.Wait()
+	stop := time.Now()
+	elapsed := stop.Sub(start)
+	timeOfSpeedTest := elapsed.Seconds()
+
+	goodSpeeds := len(speedResult)
+	for i := 1; i <= goodSpeeds; i++ {
+		n := <-speedResult
+		nodesOut = append(nodesOut, n)
+	}
+
+	return nodesOut, timeOfSpeedTest, nil
+}
+
+func mySpeedTest(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 	
 	fixedPort := port
 	client := tools.HttpClientGet(fixedPort, tools.STimeout)

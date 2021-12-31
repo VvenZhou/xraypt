@@ -3,27 +3,17 @@ package main
 import (
 	"fmt"
 	"log"
-	"sync"
 	"sort"
 	"strconv"
 	"strings"
 	"os"
-	"io/ioutil"
-	"time"
 
 	"github.com/VvenZhou/xraypt/src/ping"
 	"github.com/VvenZhou/xraypt/src/speedtest"
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-var subs []string
 
-var protocols = []string{
-	"vmess",
-	"vless",
-	"ss",
-	"ssr",
-	"trojan"}
 
 func main() {
 	tools.PreCheck(8123)
@@ -31,101 +21,71 @@ func main() {
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
 
-	byteData, err := ioutil.ReadFile(tools.SubsFilePath)
-	if err != nil {
-		log.Println("SubFile read error:", err)
-	}else{
-		log.Println("SubFile get...")
-		subs = strings.Fields(string(byteData))
-	}
 
 
+	//Get subscription links
 	var subLs tools.Links
-	tools.SubGet(&subLs, protocols, subs)
+
+	tools.GetSubLinks(&subLs)
 	vmLinks := subLs.Vms
 	ssLinks := subLs.Sses
 
-	//for _, s := range vmLinks {
-	//	fmt.Println(s, "\n")
-	//}
-	//fmt.Printf("\n\n\n\n\n")
-	//for _, s := range ssLinks {
-	//	fmt.Println(s, "\n")
-	//}
-
-	//os.Exit(0)
-
-	vmLen := len(vmLinks)
-	ssLen := len(ssLinks)
-
-	allLen := vmLen + ssLen
-
 	log.Println("Subs get done!")
 
-	var goodPingNodes []*tools.Node
-	var wgPing sync.WaitGroup
-	pingJob := make(chan *tools.Node, allLen)
-	pingResult := make(chan *tools.Node, allLen)
-
-	if allLen < tools.PThreadNum {
-		tools.PThreadNum = allLen
-	}
 
 
-	//Put vms into pingJob
-	for _, s := range vmLinks {
-		var n tools.Node
-		//n.Init(strconv.Itoa(i), "vmess", s)
-		n.Init("vmess", s)
-		pingJob <- &n
-		wgPing.Add(1)
-	}
-	//Put sses into pingJob
-	for _, s := range ssLinks {
-		var n tools.Node
-		//n.Init(strconv.Itoa(i + vmLen), "ss", s)
-		n.Init("ss", s)
-		pingJob <- &n
-		wgPing.Add(1)
-	}
+	//Ping Tests
+	vmessGoodPingNodes, vmessPingTime, _ := ping.XrayPing("vmess", vmLinks) 
+	ssGoodPingNodes, ssPingTime, _ := ping.XrayPing("ss", ssLinks) 
 
+	timeOfPing := vmessPingTime + ssPingTime
+	var allGoodPingNodes []*tools.Node
+	allGoodPingNodes = append(allGoodPingNodes, vmessGoodPingNodes...)
+	allGoodPingNodes = append(allGoodPingNodes, ssGoodPingNodes...)
 
-
-	var ports []int
-	ports, err = tools.GetFreePorts(tools.PThreadNum)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for i := 1; i <= tools.PThreadNum; i++ {
-		go ping.XrayPing(&wgPing, pingJob, pingResult, ports[i-1])
-	}
-	close(pingJob)
-
-	//os.Exit(1)
-
-	start := time.Now()
-	wgPing.Wait()
-	stop := time.Now()
-	elapsed := stop.Sub(start)
-	timeOfPing := elapsed.Seconds()
-
-	goodPingCnt := len(pingResult)
-	log.Printf("There are %d good pings\n", goodPingCnt)
-
-	for i := 1; i <= goodPingCnt; i++  {
-		n := <-pingResult
-		goodPingNodes = append(goodPingNodes, n)
-	}
-
-	//sort.Stable(tools.ByDelay(goodPingNodes))
-	for i, n := range goodPingNodes {
+	//goodPingCnt := len(allGoodPingNodes)
+	for i, n := range allGoodPingNodes {
 		fmt.Println(i, n.AvgDelay)
 	}
 
+
 	//Generate halfGoodNodes
+	generatePingOutFile(allGoodPingNodes)
+
+	os.RemoveAll(tools.TempPath)
+	os.MkdirAll(tools.TempPath, 0755)
+
+
+	//Speed Tests
+	allGoodSpeedNodes, timeOfSpeed, _ := speedtest.XraySpeedTest(allGoodPingNodes)
+
+
+	//Sort Nodes
+	sort.Stable(tools.ByDelay(allGoodSpeedNodes))
+	//sort.Sort(tools.ByULSpeed(allGoodSpeedNodes))
+	sort.Stable(tools.ByDLSpeed(allGoodSpeedNodes))
+
+
+	//Generate speedOut.txt
+	generateSpeedOutFile(allGoodSpeedNodes)
+
+
+	//Time Counting
+	log.Println("-------------------")
+	log.Println("Ping spent", timeOfPing, "s...")
+	log.Println("Speedtest spent", timeOfSpeed, "s...")
+
+
+
+	os.RemoveAll(tools.TempPath)
+	os.MkdirAll(tools.TempPath, 0755)
+	//os.RemoveAll(tools.HalfJsonsPath)
+	//os.MkdirAll(tools.HalfJsonsPath, 0755)
+}
+
+func generatePingOutFile(nodes []*tools.Node) {
 	var halfGoodVmLinks []string
-	for i, n := range goodPingNodes {
+	for i, n := range nodes {
 		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
 		str := []string{strconv.Itoa(i), "\n", n.Type, "://", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
 		vmOutStr := strings.Join(str, "")
@@ -140,59 +100,19 @@ func main() {
 			log.Println("pingOut generated!")
 		}
 	}
+}
 
-	os.RemoveAll(tools.TempPath)
-	os.MkdirAll(tools.TempPath, 0755)
-
-	//os.Exit(0)
-
-	//Do speedtest
-	var goodSpeedNodes []*tools.Node
-	var wgSpeed sync.WaitGroup
-	speedJob := make(chan *tools.Node, goodPingCnt)
-	speedResult := make(chan *tools.Node, goodPingCnt)
-
-	for _, n := range goodPingNodes {
-		speedJob <- n
-		wgSpeed.Add(1)
-	}
-
-	ports, err = tools.GetFreePorts(tools.SThreadNum)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for i := 1; i <= tools.SThreadNum; i++ {
-		go speedtest.XraySpeedTest(&wgSpeed, speedJob, speedResult, ports[i-1])
-		time.Sleep(time.Second * 3)
-	}
-	close(speedJob)
-
-	start = time.Now()
-	wgSpeed.Wait()
-	stop = time.Now()
-	elapsed = stop.Sub(start)
-	timeOfSpeedTest := elapsed.Seconds()
-
-	goodSpeeds := len(speedResult)
-	for i := 1; i <= goodSpeeds; i++ {
-		n := <-speedResult
-		goodSpeedNodes = append(goodSpeedNodes, n)
-	}
-
-	//Sort Nodes
-	sort.Stable(tools.ByDelay(goodSpeedNodes))
-	//sort.Sort(tools.ByULSpeed(goodSpeedNodes))
-	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
-
-
-	//Generate speedOut.txt
+func generateSpeedOutFile(nodes []*tools.Node) {
 	var goodVmLinks []string
-	for i, n := range goodSpeedNodes {
+	for i, n := range nodes {
 		fmt.Println(i, n.Type, (*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
 		//(*n).Id = strconv.Itoa(i)
 		n.CreateFinalJson(tools.JsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", n.Type, "://", (*n).ShareLink, "\nDelay:", strconv.Itoa((*n).AvgDelay), " Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed), " Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed), " Country: ", (*n).Country, "\n"}
+		str := []string{strconv.Itoa(i), "\n", n.Type, "://", (*n).ShareLink,
+				"\nDelay:", strconv.Itoa((*n).AvgDelay),
+				" Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed),
+				" Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed),
+				" Country: ", (*n).Country, "\n"}
 		vmOutStr := strings.Join(str, "")
 		goodVmLinks = append(goodVmLinks, vmOutStr)
 	}
@@ -207,15 +127,4 @@ func main() {
 		}
 	}
 
-
-	//Time Counting
-	log.Println("-------------------")
-	log.Println("Ping spent", timeOfPing, "s...")
-	log.Println("Speedtest spent", timeOfSpeedTest, "s...")
-
-	os.RemoveAll(tools.TempPath)
-	os.MkdirAll(tools.TempPath, 0755)
-	//os.RemoveAll(tools.HalfJsonsPath)
-	//os.MkdirAll(tools.HalfJsonsPath, 0755)
 }
-

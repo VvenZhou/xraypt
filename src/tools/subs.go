@@ -20,8 +20,28 @@ type Links struct {
 	Vlesses []string
 }
 
-func SubGet(subLs *Links, protocols []string, subs []string) {
-	var fail int 
+var protocols = []string{
+	"vmess",
+	"vless",
+	"ss",
+	"ssr",
+	"trojan"}
+
+func GetSubLinks(subLs *Links) {
+	var subs []string
+	byteData, err := ioutil.ReadFile(SubsFilePath)
+	if err != nil {
+		log.Println("SubFile read error:", err)
+	}else{
+		log.Println("SubFile get...")
+		subs = strings.Fields(string(byteData))
+	}
+
+	subGet(subLs, protocols, subs)
+}
+
+func subGet(subLs *Links, protocols []string, subs []string) {
+	var fail int
 	var links []string
 
 	flagVm, flagVl, flagSs, flagSsr, flagTrojan := checkProtocols(protocols)
@@ -141,7 +161,7 @@ func SubGet(subLs *Links, protocols []string, subs []string) {
 				subLs.Trojans = append(subLs.Trojans, s[1])
 			}
 		}
-	}	
+	}
 
 
 	//Remove duplicates

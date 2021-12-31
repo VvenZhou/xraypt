@@ -10,7 +10,77 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
+func XrayPing(strType string, linksIn []string) ([]*tools.Node, float64, error){
+
+	var nodesOut []*tools.Node
+	var wgPing sync.WaitGroup
+	var threadNum int
+
+	allLen := len(linksIn)
+	pingJob := make(chan *tools.Node, allLen)
+	pingResult := make(chan *tools.Node, allLen)
+
+	if allLen < tools.PThreadNum {
+		threadNum = allLen
+	}else{
+		threadNum = tools.PThreadNum
+	}
+
+	//Put vms into pingJob
+	switch strType {
+	case "vmess": 
+		for _, s := range linksIn {
+			var n tools.Node
+			//n.Init(strconv.Itoa(i), "vmess", s)
+			n.Init("vmess", s)
+			pingJob <- &n
+			wgPing.Add(1)
+		}
+	//Put sses into pingJob
+	case "ss":
+		for _, s := range linksIn {
+			var n tools.Node
+			//n.Init(strconv.Itoa(i + vmLen), "ss", s)
+			n.Init("ss", s)
+			pingJob <- &n
+			wgPing.Add(1)
+		}
+	}
+
+	//var ports []int
+	ports, err := tools.GetFreePorts(threadNum)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("starting goroutine")
+	for i := 1; i <= threadNum; i++ {
+		go myPing(&wgPing, pingJob, pingResult, ports[i-1])
+	}
+	close(pingJob)
+
+
+	log.Println("waiting for goroutine")
+	start := time.Now()
+	wgPing.Wait()
+	stop := time.Now()
+	elapsed := stop.Sub(start)
+	timeOfPing := elapsed.Seconds()
+
+	log.Println("goroutine finished")
+
+	goodPingCnt := len(pingResult)
+	log.Printf("There are %d good %s pings\n", goodPingCnt, strType)
+
+	for i := 1; i <= goodPingCnt; i++  {
+		n := <-pingResult
+		nodesOut = append(nodesOut, n)
+	}
+	
+	return nodesOut, timeOfPing, nil 
+}
+
+func myPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 	fixedPort := port
 	pClient := tools.HttpClientGet(fixedPort, tools.PTimeout)
 	pRealClient := tools.HttpClientGet(fixedPort, tools.PRealTimeout)
@@ -33,7 +103,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 		var fail int = 0
 
 		for i := 0; i < tools.PCnt; i++ {
-			_, code, _, err := Ping(pClient, "https://www.google.com/gen_204", nil, false)
+			_, code, _, err := doPing(pClient, "https://www.google.com/gen_204", nil, false)
 			time.Sleep(time.Millisecond * 200)
 			if err != nil {
 				if code != 0 {
@@ -52,7 +122,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 
 			for i := 0; i < tools.PRealCnt; i++{
 				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
-				delay, _, coo, err := Ping(pRealClient, "https://duckduckgo.com", cookie, true)
+				delay, _, coo, err := doPing(pRealClient, "https://duckduckgo.com", cookie, true)
 				time.Sleep(time.Millisecond * 200)
 				//if err != nil && code != 429{
 				if err != nil {
@@ -94,7 +164,7 @@ func XrayPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.
 	}
 }
 
-func Ping(myClient http.Client, url string, cookies []*http.Cookie, pReal bool) (int, int, []*http.Cookie, error){
+func doPing(myClient http.Client, url string, cookies []*http.Cookie, pReal bool) (int, int, []*http.Cookie, error){
 	var coo []*http.Cookie
 
 	req, _ := http.NewRequest("GET", url, nil)
