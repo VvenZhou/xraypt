@@ -24,40 +24,34 @@ func main() {
 
 
 	//Get subscription links
-	var subLs tools.Links
+	var subNLs tools.NodeLists
+	tools.GetSubLinks(&subNLs)
 
-	tools.GetSubLinks(&subLs)
-	vmLinks := subLs.Vms
-	ssLinks := subLs.Sses
+	var allNodes []*tools.Node
+	allNodes = append(subNLs.Vms, subNLs.Sses...)
 
 	log.Println("Subs get done!")
 
 
 
 	//Ping Tests
-	vmessGoodPingNodes, vmessPingTime, _ := ping.XrayPing("vmess", vmLinks) 
-	ssGoodPingNodes, ssPingTime, _ := ping.XrayPing("ss", ssLinks) 
+	goodPingNodes, pingTime, _ := ping.XrayPing(allNodes)
 
-	timeOfPing := vmessPingTime + ssPingTime
-	var allGoodPingNodes []*tools.Node
-	allGoodPingNodes = append(allGoodPingNodes, vmessGoodPingNodes...)
-	allGoodPingNodes = append(allGoodPingNodes, ssGoodPingNodes...)
 
-	//goodPingCnt := len(allGoodPingNodes)
-	for i, n := range allGoodPingNodes {
+	for i, n := range goodPingNodes {
 		fmt.Println(i, n.AvgDelay)
 	}
 
 
 	//Generate halfGoodNodes
-	generatePingOutFile(allGoodPingNodes)
+	generatePingOutFile(goodPingNodes)
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
 
 
 	//Speed Tests
-	allGoodSpeedNodes, timeOfSpeed, _ := speedtest.XraySpeedTest(allGoodPingNodes)
+	allGoodSpeedNodes, timeOfSpeed, _ := speedtest.XraySpeedTest(goodPingNodes)
 
 
 	//Sort Nodes
@@ -72,7 +66,7 @@ func main() {
 
 	//Time Counting
 	log.Println("-------------------")
-	log.Println("Ping spent", timeOfPing, "s...")
+	log.Println("Ping spent", pingTime, "s...")
 	log.Println("Speedtest spent", timeOfSpeed, "s...")
 
 

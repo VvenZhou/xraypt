@@ -12,12 +12,49 @@ import (
 	"github.com/antchfx/htmlquery"
 )
 
+type NodeLists struct {
+	Vms	[]*Node
+	Sses	[]*Node
+	Ssrs	[]*Node
+	Trojans	[]*Node
+	Vlesses	[]*Node
+}
+
 type Links struct {
 	Vms []string
 	Sses []string
 	Ssrs []string
 	Trojans []string
 	Vlesses []string
+}
+
+
+func (l *Links) ToNodeLists(nodeLs *NodeLists) {
+	for _, str := range l.Vms {
+		var n Node
+		n.Init("vmess", str)
+		nodeLs.Vms = append(nodeLs.Vms, &n)
+	}
+	for _, str := range l.Sses {
+		var n Node
+		n.Init("ss", str)
+		nodeLs.Sses = append(nodeLs.Sses, &n)
+	}
+	for _, str := range l.Ssrs {
+		var n Node
+		n.Init("ssr", str)
+		nodeLs.Ssrs = append(nodeLs.Ssrs, &n)
+	}
+	for _, str := range l.Trojans {
+		var n Node
+		n.Init("trojan", str)
+		nodeLs.Trojans = append(nodeLs.Trojans, &n)
+	}
+	for _, str := range l.Vlesses {
+		var n Node
+		n.Init("vless", str)
+		nodeLs.Vlesses = append(nodeLs.Vlesses, &n)
+	}
 }
 
 var protocols = []string{
@@ -27,8 +64,9 @@ var protocols = []string{
 	"ssr",
 	"trojan"}
 
-func GetSubLinks(subLs *Links) {
+func GetSubLinks(nodeLs *NodeLists) {
 	var subs []string
+	var subLs Links
 	byteData, err := ioutil.ReadFile(SubsFilePath)
 	if err != nil {
 		log.Println("SubFile read error:", err)
@@ -36,8 +74,9 @@ func GetSubLinks(subLs *Links) {
 		log.Println("SubFile get...")
 		subs = strings.Fields(string(byteData))
 	}
+	subGet(&subLs, protocols, subs)
 
-	subGet(subLs, protocols, subs)
+	subLs.ToNodeLists(nodeLs)
 }
 
 func subGet(subLs *Links, protocols []string, subs []string) {
@@ -60,12 +99,6 @@ func subGet(subLs *Links, protocols []string, subs []string) {
 			links = append(links, strLinks...)
 		}
 	}
-
-	//for _, s := range links {
-	//	fmt.Println(s, "\n")
-	//}
-	//os.Exit(0)
-
 
 	//Sublink
 	for _, sub := range subs {
@@ -122,6 +155,9 @@ func subGet(subLs *Links, protocols []string, subs []string) {
 		}else{
 			for _, vm := range yousVms {
 				l := strings.Split(vm, "vmess://")
+//				log.Println(vm)
+//				log.Println(len(l))
+//				log.Println(l)
 				subLs.Vms = append(subLs.Vms, l[1])
 			}
 		}

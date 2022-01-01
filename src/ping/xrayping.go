@@ -10,13 +10,13 @@ import (
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(strType string, linksIn []string) ([]*tools.Node, float64, error){
+func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, float64, error){
 
 	var nodesOut []*tools.Node
 	var wgPing sync.WaitGroup
 	var threadNum int
 
-	allLen := len(linksIn)
+	allLen := len(nodesIn)
 	pingJob := make(chan *tools.Node, allLen)
 	pingResult := make(chan *tools.Node, allLen)
 
@@ -27,24 +27,30 @@ func XrayPing(strType string, linksIn []string) ([]*tools.Node, float64, error){
 	}
 
 	//Put vms into pingJob
-	switch strType {
-	case "vmess": 
-		for _, s := range linksIn {
-			var n tools.Node
-			//n.Init(strconv.Itoa(i), "vmess", s)
-			n.Init("vmess", s)
-			pingJob <- &n
-			wgPing.Add(1)
-		}
-	//Put sses into pingJob
-	case "ss":
-		for _, s := range linksIn {
-			var n tools.Node
-			//n.Init(strconv.Itoa(i + vmLen), "ss", s)
-			n.Init("ss", s)
-			pingJob <- &n
-			wgPing.Add(1)
-		}
+//	switch strType {
+//	case "vmess": 
+//		for _, s := range linksIn {
+//			var n tools.Node
+//			//n.Init(strconv.Itoa(i), "vmess", s)
+//			n.Init("vmess", s)
+//			pingJob <- &n
+//			wgPing.Add(1)
+//		}
+//	//Put sses into pingJob
+//	case "ss":
+//		for _, s := range linksIn {
+//			var n tools.Node
+//			//n.Init(strconv.Itoa(i + vmLen), "ss", s)
+//			n.Init("ss", s)
+//			pingJob <- &n
+//			wgPing.Add(1)
+//		}
+//	}
+
+	//Put nodesIn into pingJob
+	for _, n := range nodesIn {
+		pingJob <- n
+		wgPing.Add(1)
 	}
 
 	//var ports []int
@@ -70,7 +76,7 @@ func XrayPing(strType string, linksIn []string) ([]*tools.Node, float64, error){
 	log.Println("goroutine finished")
 
 	goodPingCnt := len(pingResult)
-	log.Printf("There are %d good %s pings\n", goodPingCnt, strType)
+	log.Printf("There are %d good pings\n", goodPingCnt)
 
 	for i := 1; i <= goodPingCnt; i++  {
 		n := <-pingResult
@@ -94,7 +100,7 @@ func myPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.No
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = x.Run()
+		_, err = x.Run()
 		if err != nil {
 			log.Fatal(err)
 		}
