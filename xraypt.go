@@ -16,7 +16,7 @@ import (
 
 
 func main() {
-	tools.PreCheck(8123)
+	tools.PreCheck(tools.MainPort)
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
@@ -73,8 +73,6 @@ func main() {
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
-	//os.RemoveAll(tools.HalfJsonsPath)
-	//os.MkdirAll(tools.HalfJsonsPath, 0755)
 }
 
 func generatePingOutFile(nodes []*tools.Node) {
@@ -87,7 +85,7 @@ func generatePingOutFile(nodes []*tools.Node) {
 	}
 	if len(halfGoodVmLinks) != 0 {
 		bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
-		err := os.WriteFile("pingOut.txt", bytes, 0644)
+		err := os.WriteFile(tools.PingOutPath, bytes, 0644)
 		if err != nil {
 			log.Println(err)
 		}else{
@@ -113,7 +111,7 @@ func generateSpeedOutFile(nodes []*tools.Node) {
 
 	if len(goodVmLinks) != 0 {
 		bytes := []byte(strings.Join(goodVmLinks[:], "\n"))
-		err := os.WriteFile("speedOut.txt", bytes, 0644)
+		err := os.WriteFile(tools.SpeedOutPath, bytes, 0644)
 		if err != nil {
 			log.Println(err)
 		}else{

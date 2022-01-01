@@ -120,23 +120,23 @@ func subGet(subLs *Links, protocols []string, subs []string) {
 	}
 
 	// Links from speedOut
-	strLinks, err = getLinksFromFile("speedOut.txt")
+	strLinks, err = getLinksFromFile(SpeedOutPath)
 	if err != nil {
 		log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
 	}else{
 		if len(strLinks) != 0 {
 			links = append(links, strLinks...)
-			log.Println("speedOut got!")
+			log.Println("speedOut.txt got!")
 		}
 	}
 	// Links from pingOut
-	strLinks, err = getLinksFromFile("pingOut.txt")
+	strLinks, err = getLinksFromFile(PingOutPath)
 	if err != nil {
 		log.Println("[ERROR]: getVmFrom pingOut.txt:", err)
 	}else{
 		if len(strLinks) != 0 {
 			links = append(links, strLinks...)
-			log.Println("speedOut got!")
+			log.Println("pingOut.txt got!")
 		}
 	}
 

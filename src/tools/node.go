@@ -106,7 +106,7 @@ func (n *Node) CreateFinalJson(dirPath string, name string) {
 		log.Println(err)
 	}
 
-	err = JsonChangePort(n.JsonPath, n.JsonPath, 8123)
+	err = JsonChangePort(n.JsonPath, n.JsonPath, MainPort)
 	if err != nil {
 		log.Println(err)
 	}

@@ -7,16 +7,21 @@ import (
 	"os"
 )
 
-var JitPath string
-var TempPath string
-var BackupPath string
 var PreProxyPort int
-var JsonsPath string
-var HalfJsonsPath string
+const MainPort = 8123
+
 var XrayPath string
 var SubsFilePath string
+var PingOutPath string
+var SpeedOutPath string
 
-const MainPort = 8123
+var TempPath string
+var JsonsPath string
+var HalfJsonsPath string
+var BackupPath string
+var ConfigPath string
+var OutPath string
+
 
 var PThreadNum = 150
 const SThreadNum = 10
@@ -47,7 +52,6 @@ func PreCheck(preProxyPort int) {
 func isLinux() bool{
 	os := runtime.GOOS
 	log.Println("Platform:", os)
-	SubsFilePath = "subs.txt"
 	if os == "linux" {
 		return true
 	}else{
@@ -58,42 +62,55 @@ func isLinux() bool{
 func gVarInit(port int){
 	PreProxyPort = port
 	if isLinux() {
-		JitPath = "jit/"
+		XrayPath = "tools/xray"
+
 		TempPath = "temp/"
 		BackupPath = "backup/"
-		JsonsPath = "jsons/"
-		HalfJsonsPath = "halfJsons/"
-		XrayPath = "tools/xray"
+		ConfigPath = "config/"
+		OutPath = "out/"
+
+		JsonsPath = "out/jsons/"
+		HalfJsonsPath = "out/halfJsons/"
+
+		PingOutPath = "out/pingOut.txt"
+		SpeedOutPath = "out/speedOut.txt"
+		SubsFilePath = "config/subs.txt"
 	}else{
-		JitPath = "jit\\"
+		XrayPath = "tools\\xray.exe"
+
 		TempPath = "temp\\"
 		BackupPath = "backup\\"
-		JsonsPath = "jsons\\"
-		HalfJsonsPath = "halfJsons\\"
-		XrayPath = "tools\\xray.exe"
+		ConfigPath = "config\\"
+		OutPath = "out\\"
+
+		JsonsPath = "out\\jsons\\"
+		HalfJsonsPath = "out\\halfJsons\\"
+
+		PingOutPath = "out\\pingOut.txt"
+		SpeedOutPath = "out\\speedOut.txt"
+		SubsFilePath = "config\\subs.txt"
 	}
 }
 
 func dirInit(){
-	//if _, err := os.Stat(JitPath); os.IsNotExist(err) {
-	//	// path/to/whatever does not exist
-	//	os.MkdirAll(JitPath, 0755)
-	//}
 	if _, err := os.Stat(TempPath); os.IsNotExist(err) {
 		// path/to/whatever does not exist
 		os.MkdirAll(TempPath, 0755)
 	}
 	if _, err := os.Stat(BackupPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		os.MkdirAll(BackupPath, 0755)
 	}
 	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		os.MkdirAll(JsonsPath, 0755)
 	}
 	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		os.MkdirAll(HalfJsonsPath, 0755)
+	}
+	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
+		os.MkdirAll(ConfigPath, 0755)
+	}
+	if _, err := os.Stat(OutPath); os.IsNotExist(err) {
+		os.MkdirAll(OutPath, 0755)
 	}
 }
 
