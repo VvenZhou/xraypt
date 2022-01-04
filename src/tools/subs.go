@@ -4,13 +4,16 @@ import (
 	"net/http"
 	"io/ioutil"
 	"io"
+	"os"
 	"encoding/json"
 	"encoding/base64"
 	"log"
 	"strings"
+	"strconv"
 	"regexp"
 	"github.com/antchfx/htmlquery"
 )
+
 
 type NodeLists struct {
 	Vms	[]*Node
@@ -29,7 +32,7 @@ type Links struct {
 }
 
 
-func (l *Links) ToNodeLists(nodeLs *NodeLists) {
+func (l *Links) AddToNodeLists(nodeLs *NodeLists) {
 	for _, str := range l.Vms {
 		var n Node
 		n.Init("vmess", str)
@@ -57,14 +60,12 @@ func (l *Links) ToNodeLists(nodeLs *NodeLists) {
 	}
 }
 
-var protocols = []string{
-	"vmess",
-	"vless",
-	"ss",
-	"ssr",
-	"trojan"}
 
-func GetSubLinks(nodeLs *NodeLists) {
+func GetAllNodes(nodeLs *NodeLists) {
+	// Get nodes from GoodOut.txt && 
+	GetNodeLsFromFormatedFile(nodeLs, GoodOutPath)
+	//GetNodeLsFromFormatedFile(nodeLs, BadOutPath)
+
 	var subs []string
 	var subLs Links
 	byteData, err := ioutil.ReadFile(SubsFilePath)
@@ -74,16 +75,47 @@ func GetSubLinks(nodeLs *NodeLists) {
 		log.Println("SubFile get...")
 		subs = strings.Fields(string(byteData))
 	}
-	subGet(&subLs, protocols, subs)
+	getLinks(&subLs, subs)
+	subLs.AddToNodeLists(nodeLs)
 
-	subLs.ToNodeLists(nodeLs)
+	//Remove duplicates
+	log.Println("start remove duplicates...")
+	if FlagVm && len(nodeLs.Vms)!=0 {
+		log.Printf("vm befor: %d    ", len(nodeLs.Vms))
+		VmRemoveDuplicateNodes(&(nodeLs.Vms))
+		//nodeLs.Vms = VmRemoveDulpicate(nodeLs.Vms)
+		log.Printf("after: %d\n", len(nodeLs.Vms))
+	}
+	if FlagSs && len(nodeLs.Sses)!=0 {
+		log.Printf("ss befor: %d    ", len(nodeLs.Sses))
+		SsRemoveDuplicateNodes(&(nodeLs.Sses))
+		//nodeLs.Sses = SsRemoveDulpicate(nodeLs.Sses)
+		log.Printf("after: %d\n", len(nodeLs.Sses))
+	}
+	log.Println("remove duplicates done...")
+
+
+	//Show total counts
+	if FlagVm {
+		log.Println("get Vms:", len(nodeLs.Vms))
+	}
+	if FlagVl {
+		log.Println("get vlesses:", len(nodeLs.Vlesses))
+	}
+	if FlagSs {
+		log.Println("get sses:", len(nodeLs.Sses))
+	}
+	if FlagSsr {
+		log.Println("get ssrs:", len(nodeLs.Ssrs))
+	}
+	if FlagTrojan{
+		log.Println("get trojans:", len(nodeLs.Trojans))
+	}
 }
 
-func subGet(subLs *Links, protocols []string, subs []string) {
+func getLinks(subLs *Links, subs []string) {
 	var fail int
 	var links []string
-
-	flagVm, flagVl, flagSs, flagSsr, flagTrojan := checkProtocols(protocols)
 
 	// Get links from Freefq
 	START_FREEFQ:
@@ -100,48 +132,8 @@ func subGet(subLs *Links, protocols []string, subs []string) {
 		}
 	}
 
-	//Sublink
-	for _, sub := range subs {
-		fail = 0
-		START_SUBLINK:
-		strLinks, err := getStrFromSublink(sub)
-		if err != nil {
-			log.Println("[ERROR]", "SubGet:", sub, err)
-			fail += 1
-			if fail < 3 {
-				goto START_SUBLINK
-			}
-		}else{
-			if len(strLinks) != 0 {
-				links = append(links, strLinks...)
-				log.Println("SubString got!")
-			}
-		}
-	}
-
-	// Links from speedOut
-	strLinks, err = getLinksFromFile(SpeedOutPath)
-	if err != nil {
-		log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
-	}else{
-		if len(strLinks) != 0 {
-			links = append(links, strLinks...)
-			log.Println("speedOut.txt got!")
-		}
-	}
-	// Links from pingOut
-	strLinks, err = getLinksFromFile(PingOutPath)
-	if err != nil {
-		log.Println("[ERROR]: getVmFrom pingOut.txt:", err)
-	}else{
-		if len(strLinks) != 0 {
-			links = append(links, strLinks...)
-			log.Println("pingOut.txt got!")
-		}
-	}
-
-	// Vms from YouNeedWind
-	if flagVm {
+	// Get Vms from YouNeedWind
+	if FlagVm {
 		fail = 0
 
 		START_YOU:
@@ -164,34 +156,140 @@ func subGet(subLs *Links, protocols []string, subs []string) {
 
 	}
 
+	//Sublink
+	for _, sub := range subs {
+		fail = 0
+		START_SUBLINK:
+		strLinks, err := getStrFromSublink(sub)
+		if err != nil {
+			log.Println("[ERROR]", "SubGet:", sub, err)
+			fail += 1
+			if fail < 3 {
+				goto START_SUBLINK
+			}
+		}else{
+			if len(strLinks) != 0 {
+				links = append(links, strLinks...)
+				log.Println("SubString got!")
+			}
+		}
+	}
+
+//	// Links from GoodOut.txt
+//	strLinks, err = getLinksFromFile(GoodOutPath)
+//	if err != nil {
+//		log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
+//	}else{
+//		if len(strLinks) != 0 {
+//			links = append(links, strLinks...)
+//			log.Println("speedOut.txt got!")
+//		}
+//	}
+//	// Links from BadOut.txt
+//	strLinks, err = getLinksFromFile(BadOutPath)
+//	if err != nil {
+//		log.Println("[ERROR]: getVmFrom pingOut.txt:", err)
+//	}else{
+//		if len(strLinks) != 0 {
+//			links = append(links, strLinks...)
+//			log.Println("pingOut.txt got!")
+//		}
+//	}
+
+
 	//Dispatch links
+	DispatchLinks(subLs, links)
+
+
+}
+
+func GetNodeLsFromFile(nodeLs *NodeLists, filePath string) {
+	var subLs Links
+	links, _ := getLinksFromFile(filePath)
+	DispatchLinks(&subLs, links)
+	subLs.AddToNodeLists(nodeLs)
+}
+
+func GetNodeLsFromFormatedFile(nodeLs *NodeLists, filePath string ) {
+	var nodes []*Node
+	nodes, _ = GetNodesFromFormatedFile(filePath)
+	DispatchNodes(nodeLs, nodes)
+}
+
+func getLinksFromFile(fileName string) ([]string, error){
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return []string{}, err
+	}
+	var links []string
+	strs := strings.Fields(string(content))
+	for _, str := range strs {
+		s := extractAvailableLink(str)
+		if s != "" {
+			links = append(links, s)
+		}
+	}
+	return links, nil
+}
+
+func extractAvailableLink(str string) string {
+	Re := regexp.MustCompile(`[!a-z]*?vless://([^<]*)\s*<*`)
+	strList := Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?vmess://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?ss://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?trojan://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+	Re = regexp.MustCompile(`[!a-z]*?ssr://([^<]*)\s*`)
+	strList = Re.FindAllStringSubmatch(str, -1)
+	if len(strList) != 0 {
+		return (strList[0][0])
+	}
+
+	return ""
+}
+
+func DispatchLinks(subLs *Links, links []string) {
 	for _, str := range links {
 		var s []string
-		if flagVm {
+		if FlagVm {
 			if strings.HasPrefix(str, "vmess://") {
 				s = strings.Split(str, "://")
 				subLs.Vms = append(subLs.Vms, s[1])
 			}
 		}
-		if flagVl {
+		if FlagVl {
 			if strings.HasPrefix(str, "vless://") {
 				s = strings.Split(str, "://")
 				subLs.Vlesses = append(subLs.Vlesses, s[1])
 			}
 		}
-		if flagSs {
+		if FlagSs {
 			if strings.HasPrefix(str, "ss://") {
 				s = strings.Split(str, "://")
 				subLs.Sses = append(subLs.Sses, s[1])
 			}
 		}
-		if flagSsr {
+		if FlagSsr {
 			if strings.HasPrefix(str, "ssr://") {
 				s = strings.Split(str, "://")
 				subLs.Ssrs = append(subLs.Ssrs, s[1])
 			}
 		}
-		if flagTrojan{
+		if FlagTrojan{
 			if strings.HasPrefix(str, "trojan://") {
 				s = strings.Split(str, "://")
 				subLs.Trojans = append(subLs.Trojans, s[1])
@@ -199,40 +297,111 @@ func subGet(subLs *Links, protocols []string, subs []string) {
 		}
 	}
 
+}
 
-	//Remove duplicates
-	log.Println("start remove duplicates...")
-	if flagVm && len(subLs.Vms)!=0 {
-		log.Printf("vm befor: %d    ", len(subLs.Vms))
-		subLs.Vms = VmRemoveDulpicate(subLs.Vms)
-		log.Printf("after: %d\n", len(subLs.Vms))
+func DispatchNodes(nodeLs *NodeLists, nodes []*Node) {
+	for _, node := range nodes {
+		if FlagVm {
+			if node.Type == "vmess" {
+				nodeLs.Vms = append(nodeLs.Vms, node)
+			}
+		}
+		if FlagSs {
+			if node.Type == "ss" {
+				nodeLs.Sses = append(nodeLs.Sses, node)
+			}
+		}
+		if FlagVl {
+			if node.Type == "vless" {
+				nodeLs.Vlesses = append(nodeLs.Vlesses, node)
+			}
+		}
+		if FlagSsr {
+			if node.Type == "ssr" {
+				nodeLs.Ssrs = append(nodeLs.Ssrs, node)
+			}
+		}
+		if FlagTrojan {
+			if node.Type == "trojan" {
+				nodeLs.Trojans = append(nodeLs.Trojans, node)
+			}
+		}
 	}
-	if flagSs && len(subLs.Sses)!=0 {
-		log.Printf("ss befor: %d    ", len(subLs.Sses))
-		subLs.Sses = SsRemoveDulpicate(subLs.Sses)
-		log.Printf("after: %d\n", len(subLs.Sses))
+}
+
+func GetNodesFromFormatedFile(filePath string) ([]*Node, error) {
+	var nodes []*Node
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
 	}
-	log.Println("remove duplicates done...")
+	strs := strings.Fields(string(content))
+	for _, str := range strs {
+		var node Node
+		s := strings.Split(str, ",")
+		i, _ := strconv.Atoi(s[0])
+		node.AvgDelay = i 
+		node.Type = s[1]
+		node.ShareLink = s[2]
+		nodes = append(nodes, &node)
+	}
+	return nodes, nil
+}
+
+func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
+	var rows []string
+
+	if len(nodes) == 0  {
+		return nil
+	}
+
+	for _, n := range nodes {
+		str := []string{strconv.Itoa(n.AvgDelay), n.Type, n.ShareLink}
+		row := strings.Join(str, ",")
+		rows = append(rows, row)
+	}
+
+	bytes := []byte(strings.Join(rows[:], "\n"))
+	err := os.WriteFile(filePath, bytes, 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}else{
+		log.Println(filePath, "generated!")
+		return nil
+	}
+
+}
+
+func getStrFromSublink(subLink string) ([]string, error) {
+	myClient := HttpClientGet(PreProxyPort, SubTimeout)
+	//myClient := HttpClientGet(0, SubTimeout)
+	req := HttpNewRequest(subLink)
+
+	resp, err := myClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	contents, _ := ioutil.ReadAll(resp.Body)
+
+	byteData, err := base64.StdEncoding.DecodeString(string(contents))
+	if err != nil {
+		return nil, err
+	}
+	strData := string(byteData)
 
 
-
-	//Show total counts
-	if flagVm {
-		log.Println("get Vms:", len(subLs.Vms))
-	}
-	if flagVl {
-		log.Println("get vlesses:", len(subLs.Vlesses))
-	}
-	if flagSs {
-		log.Println("get sses:", len(subLs.Sses))
-	}
-	if flagSsr {
-		log.Println("get ssrs:", len(subLs.Ssrs))
-	}
-	if flagTrojan{
-		log.Println("get trojans:", len(subLs.Trojans))
+	var links []string
+	strs := strings.Fields(strData)
+	for _, str := range strs {
+		s := extractAvailableLink(str)
+		if s != "" {
+			links = append(links, s)
+		}
 	}
 
+	return links, nil
 }
 
 func getVmFromYou() ([]string, error) {
@@ -376,119 +545,4 @@ func getAllFromFreefq() ([]string, error) {
 	}
 
 	return links, nil
-}
-
-func getStrFromSublink(subLink string) ([]string, error) {
-	myClient := HttpClientGet(PreProxyPort, SubTimeout)
-	//myClient := HttpClientGet(0, SubTimeout)
-	req := HttpNewRequest(subLink)
-
-	resp, err := myClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	contents, _ := ioutil.ReadAll(resp.Body)
-
-	byteData, err := base64.StdEncoding.DecodeString(string(contents))
-	if err != nil {
-		return nil, err
-	}
-	strData := string(byteData)
-
-
-	var links []string
-	strs := strings.Fields(strData)
-	for _, str := range strs {
-		s := extractAvailableLink(str)
-		if s != "" {
-			links = append(links, s)
-		}
-	}
-
-	return links, nil
-}
-
-func getLinksFromFile(fileName string) ([]string, error){
-	content, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return []string{}, err
-	}
-	var links []string
-	strs := strings.Fields(string(content))
-	for _, str := range strs {
-		s := extractAvailableLink(str)
-		if s != "" {
-			links = append(links, s)
-		}
-	}
-	return links, nil
-}
-
-func checkProtocols(protocols []string) (flagVm , flagVl, flagSs, flagSsr, flagTrojan bool) {
-	if strInSlice("vless", protocols){
-		flagVl = true
-	}else{
-		flagVl = false
-	}
-	if strInSlice("vmess", protocols){
-		flagVm = true
-	}else{
-		flagVm = false
-	}
-	if strInSlice("ss", protocols){
-		flagSs = true
-	}else{
-		flagSs = false
-	}
-	if strInSlice("trojan", protocols){
-		flagTrojan = true
-	}else{
-		flagTrojan = false
-	}
-	if strInSlice("ssr", protocols){
-		flagSsr = true
-	}else{
-		flagSsr = false
-	}
-	return
-}
-
-func extractAvailableLink(str string) string {
-	Re := regexp.MustCompile(`[!a-z]*?vless://([^<]*)\s*<*`)
-	strList := Re.FindAllStringSubmatch(str, -1)
-	if len(strList) != 0 {
-		return (strList[0][0])
-	}
-	Re = regexp.MustCompile(`[!a-z]*?vmess://([^<]*)\s*`)
-	strList = Re.FindAllStringSubmatch(str, -1)
-	if len(strList) != 0 {
-		return (strList[0][0])
-	}
-	Re = regexp.MustCompile(`[!a-z]*?ss://([^<]*)\s*`)
-	strList = Re.FindAllStringSubmatch(str, -1)
-	if len(strList) != 0 {
-		return (strList[0][0])
-	}
-	Re = regexp.MustCompile(`[!a-z]*?trojan://([^<]*)\s*`)
-	strList = Re.FindAllStringSubmatch(str, -1)
-	if len(strList) != 0 {
-		return (strList[0][0])
-	}
-	Re = regexp.MustCompile(`[!a-z]*?ssr://([^<]*)\s*`)
-	strList = Re.FindAllStringSubmatch(str, -1)
-	if len(strList) != 0 {
-		return (strList[0][0])
-	}
-
-	return ""
-}
-
-func strInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
 }

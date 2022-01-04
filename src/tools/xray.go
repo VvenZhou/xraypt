@@ -16,7 +16,7 @@ type Xray struct {
 }
 
 
-func XrayDaemon(node *Node, cmdCh <-chan string, feedback chan<- int) (error) {
+func XrayDaemon(node *Node, cmdCh <-chan string, feedbackCh chan<- string) (error) {
 	var x Xray
 	node.Port = MainPort
 	node.CreateJson(TempPath)
@@ -30,6 +30,8 @@ func XrayDaemon(node *Node, cmdCh <-chan string, feedback chan<- int) (error) {
 		log.Fatal(err)
 	}
 
+	feedbackCh <- "running confirmed"
+
 	for {
 		select {
 		case cmd := <- cmdCh :
@@ -39,7 +41,7 @@ func XrayDaemon(node *Node, cmdCh <-chan string, feedback chan<- int) (error) {
 				if err != nil {
 					log.Fatal(err)
 				}
-				feedback <- 0;	 //"confirmed"
+				feedbackCh <- "TERM confirmed";	 //"confirmed"
 				return nil
 			}
 //		default :
@@ -49,6 +51,8 @@ func XrayDaemon(node *Node, cmdCh <-chan string, feedback chan<- int) (error) {
 //			if n >0 {
 //				fmt.Printf(string(buff[:n]))
 //			}
+
+			//feedback <- "running"
 		}
 	}	
 }

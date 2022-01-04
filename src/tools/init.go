@@ -15,6 +15,10 @@ var SubsFilePath string
 var PingOutPath string
 var SpeedOutPath string
 
+var GoodOutPath string
+var BadOutPath string
+var ErrorOutPath string
+
 var TempPath string
 var JsonsPath string
 var HalfJsonsPath string
@@ -22,6 +26,8 @@ var BackupPath string
 var ConfigPath string
 var OutPath string
 
+
+var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
 var PThreadNum = 150
 const SThreadNum = 10
@@ -39,12 +45,17 @@ const pT = 2000 //ms
 const pRealT = 1000 //ms
 const sT = 15000 //ms
 
+var RoutinePeriod = 300		// seconds
+
+var RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
+
 const PTimeout = time.Duration(pT * 2) * time.Millisecond
 const PRealTimeout = time.Duration(pRealT * 2) * time.Millisecond
 const STimeout = time.Duration(sT) * time.Millisecond
 const SubTimeout = time.Duration(subT) * time.Millisecond
 
-func PreCheck(preProxyPort int) {
+func PreCheck(preProxyPort int, protocols []string) {
+	FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan = checkProtocols(protocols)
 	gVarInit(preProxyPort)
 	dirInit()
 }
@@ -74,6 +85,11 @@ func gVarInit(port int){
 
 		PingOutPath = "out/pingOut.txt"
 		SpeedOutPath = "out/speedOut.txt"
+
+		GoodOutPath = "out/goodOut.txt"
+		BadOutPath = "out/badOut.txt"
+		ErrorOutPath = "out/errorOut.txt"
+
 		SubsFilePath = "config/subs.txt"
 	}else{
 		XrayPath = "tools\\xray.exe"
@@ -88,6 +104,8 @@ func gVarInit(port int){
 
 		PingOutPath = "out\\pingOut.txt"
 		SpeedOutPath = "out\\speedOut.txt"
+		ErrorOutPath = "out\\errorOut.txt"
+
 		SubsFilePath = "config\\subs.txt"
 	}
 }
@@ -97,15 +115,15 @@ func dirInit(){
 		// path/to/whatever does not exist
 		os.MkdirAll(TempPath, 0755)
 	}
-	if _, err := os.Stat(BackupPath); os.IsNotExist(err) {
-		os.MkdirAll(BackupPath, 0755)
-	}
-	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
-		os.MkdirAll(JsonsPath, 0755)
-	}
-	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
-		os.MkdirAll(HalfJsonsPath, 0755)
-	}
+//	if _, err := os.Stat(BackupPath); os.IsNotExist(err) {
+//		os.MkdirAll(BackupPath, 0755)
+//	}
+//	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
+//		os.MkdirAll(JsonsPath, 0755)
+//	}
+//	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
+//		os.MkdirAll(HalfJsonsPath, 0755)
+//	}
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		os.MkdirAll(ConfigPath, 0755)
 	}
@@ -114,3 +132,40 @@ func dirInit(){
 	}
 }
 
+func checkProtocols(protocols []string) (flagVm , flagVl, flagSs, flagSsr, flagTrojan bool) {
+	if strInSlice("vless", protocols){
+		flagVl = true
+	}else{
+		flagVl = false
+	}
+	if strInSlice("vmess", protocols){
+		flagVm = true
+	}else{
+		flagVm = false
+	}
+	if strInSlice("ss", protocols){
+		flagSs = true
+	}else{
+		flagSs = false
+	}
+	if strInSlice("trojan", protocols){
+		flagTrojan = true
+	}else{
+		flagTrojan = false
+	}
+	if strInSlice("ssr", protocols){
+		flagSsr = true
+	}else{
+		flagSsr = false
+	}
+	return
+}
+
+func strInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}

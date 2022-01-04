@@ -11,12 +11,44 @@ import (
 	"github.com/VvenZhou/xraypt/src/ping"
 	"github.com/VvenZhou/xraypt/src/speedtest"
 	"github.com/VvenZhou/xraypt/src/tools"
+	"github.com/VvenZhou/xraypt/src/monitor"
 )
 
 
+var protocols = []string{
+	"vmess",
+	"vless",
+	"ss",
+	"ssr",
+	"trojan"}
+
 
 func main() {
-	tools.PreCheck(tools.MainPort)
+
+//	oldmain()
+	tools.PreCheck(tools.MainPort, protocols)
+
+	os.RemoveAll(tools.TempPath)
+	os.MkdirAll(tools.TempPath, 0755)
+
+	cmdCh := make(chan string)	
+	feedbackCh := make(chan int)	
+
+	go monitor.AutoMonitor(cmdCh, feedbackCh)
+
+	cmdCh <- "Auto"
+
+	for {
+		log.Println(<- feedbackCh)
+	}
+
+
+	os.RemoveAll(tools.TempPath)
+	os.MkdirAll(tools.TempPath, 0755)
+}
+
+func oldmain() {
+	tools.PreCheck(tools.MainPort, protocols)
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
@@ -25,7 +57,7 @@ func main() {
 
 	//Get subscription links
 	var subNLs tools.NodeLists
-	tools.GetSubLinks(&subNLs)
+	tools.GetAllNodes(&subNLs)
 
 	var allNodes []*tools.Node
 	allNodes = append(subNLs.Vms, subNLs.Sses...)
@@ -35,12 +67,15 @@ func main() {
 
 
 	//Ping Tests
-	goodPingNodes, pingTime, _ := ping.XrayPing(allNodes)
+	goodPingNodes, badPingNodes, _, pingTime, _ := ping.XrayPing(allNodes)
 
 
 	for i, n := range goodPingNodes {
 		fmt.Println(i, n.AvgDelay)
 	}
+	fmt.Println("good:", len(goodPingNodes), "bad:", len(badPingNodes))
+
+	os.Exit(0)
 
 
 	//Generate halfGoodNodes
@@ -51,17 +86,17 @@ func main() {
 
 
 	//Speed Tests
-	allGoodSpeedNodes, timeOfSpeed, _ := speedtest.XraySpeedTest(goodPingNodes)
+	goodSpeedNodes, timeOfSpeed, _ := speedtest.XraySpeedTest(goodPingNodes)
 
 
 	//Sort Nodes
-	sort.Stable(tools.ByDelay(allGoodSpeedNodes))
-	//sort.Sort(tools.ByULSpeed(allGoodSpeedNodes))
-	sort.Stable(tools.ByDLSpeed(allGoodSpeedNodes))
+	sort.Stable(tools.ByDelay(goodSpeedNodes))
+	//sort.Sort(tools.ByULSpeed(goodSpeedNodes))
+	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
 
 
 	//Generate speedOut.txt
-	generateSpeedOutFile(allGoodSpeedNodes)
+	generateSpeedOutFile(goodSpeedNodes)
 
 
 	//Time Counting
@@ -76,15 +111,15 @@ func main() {
 }
 
 func generatePingOutFile(nodes []*tools.Node) {
-	var halfGoodVmLinks []string
+	var link []string
 	for i, n := range nodes {
 		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
 		str := []string{strconv.Itoa(i), "\n", n.Type, "://", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
 		vmOutStr := strings.Join(str, "")
-		halfGoodVmLinks = append(halfGoodVmLinks, vmOutStr)
+		link = append(link, vmOutStr)
 	}
-	if len(halfGoodVmLinks) != 0 {
-		bytes := []byte(strings.Join(halfGoodVmLinks[:], "\n"))
+	if len(link) != 0 {
+		bytes := []byte(strings.Join(link[:], "\n"))
 		err := os.WriteFile(tools.PingOutPath, bytes, 0644)
 		if err != nil {
 			log.Println(err)

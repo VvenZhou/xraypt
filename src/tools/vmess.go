@@ -54,6 +54,7 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 
 	err := vmlinkToVmshare(&vmShare, vmShareLink)
 	if err != nil {
+		err = fmt.Errorf("vmlinkToVmshare:", err)
 		return err
 	}
 
@@ -98,13 +99,13 @@ func vmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
 
 	data, err := base64.StdEncoding.DecodeString(vmLink)
 	if err != nil {
-		err = fmt.Errorf("ERROR: vmlinkToVmShare: base64Decode:", err)
+		err = fmt.Errorf("base64Decode:", err)
 		return err
 	}
 
 	err = json.Unmarshal(data, &i)
 	if err != nil {
-		err = fmt.Errorf("ERROR: vmlinkToVmShare: jsonUnmarshal:", err)
+		err = fmt.Errorf("jsonUnmarshal:", err)
 		return err
 	}
 
@@ -140,20 +141,21 @@ func vmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
 	return nil
 }
 
-func VmRemoveDulpicate(vmLinks []string) []string {
+func VmRemoveDuplicateNodes(nodes *[]*Node) {
 	var vmS VmessShare
-	var vmNoDup []string
+	var nodesNoDup []*Node
 	var vmShare []*VmessShare
 	var flag bool
 
-	vmlinkToVmshare(&vmS, vmLinks[0])
-	vmNoDup = append(vmNoDup, vmLinks[0])
+
+	vmlinkToVmshare(&vmS, (*nodes)[0].ShareLink)
+	nodesNoDup = append(nodesNoDup, (*nodes)[0])
 	vmShare = append(vmShare, &vmS)
 
-	for _, vmL := range vmLinks{
+	for _, node := range (*nodes){
 		var vmS2 VmessShare
 		flag = true
-		vmlinkToVmshare(&vmS2, vmL)
+		vmlinkToVmshare(&vmS2, node.ShareLink)
 		for _, vm := range vmShare {
 			//if vmShareCompare(vm, &vmS2) {
 			if *vm == vmS2 {
@@ -162,11 +164,12 @@ func VmRemoveDulpicate(vmLinks []string) []string {
 			}
 		}
 		if flag {
-			vmNoDup = append(vmNoDup, vmL)
+			nodesNoDup = append(nodesNoDup, node)
 			vmShare = append(vmShare, &vmS2)
 		}
 	}
-	return vmNoDup
+
+	(*nodes) = nodesNoDup
 }
 
 //Not used, yet.

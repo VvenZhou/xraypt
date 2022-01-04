@@ -132,23 +132,25 @@ func linkToShareType1(link string) (string, string, string, int, error) {
 	return method, pwd, addr, port, nil
 }
 
-func SsRemoveDulpicate(ssLinks []string) []string {
+func SsRemoveDuplicateNodes(nodes *[]*Node) {
 	var ssS ssShare
-	var ssNoDup []string
+	var nodesNoDup []*Node
 	var ssShareList []*ssShare
 	var flag bool
 
-	err := ssLinkToShare(&ssS, ssLinks[0])
+
+	err := ssLinkToShare(&ssS, (*nodes)[0].ShareLink)
 	if err != nil {
 		log.Println("ERROR: SsRemoveDup: ssLinkToShare:", err)
 	}
-	ssNoDup = append(ssNoDup, ssLinks[0])
+
+	nodesNoDup = append(nodesNoDup, (*nodes)[0])
 	ssShareList = append(ssShareList, &ssS)
 
-	for _, ssL := range ssLinks{
+	for _, node := range (*nodes){
 		var ssS2 ssShare
 		flag = true
-		ssLinkToShare(&ssS2, ssL)
+		ssLinkToShare(&ssS2, node.ShareLink)
 		for _, ss := range ssShareList {
 			//if ssShareCompare(ss, &ssS2) {
 			if *ss == ssS2 {
@@ -157,9 +159,11 @@ func SsRemoveDulpicate(ssLinks []string) []string {
 			}
 		}
 		if flag {
-			ssNoDup = append(ssNoDup, ssL)
+			nodesNoDup = append(nodesNoDup, node)
 			ssShareList = append(ssShareList, &ssS2)
 		}
 	}
-	return ssNoDup
+
+	(*nodes) = nodesNoDup
+
 }

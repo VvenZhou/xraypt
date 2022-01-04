@@ -2,21 +2,21 @@ package ping
 
 import (
 	"log"
+	"fmt"
 	"time"
 	"net/http"
 	"errors"
-	"sync"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 )
 
-func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, float64, error){
-
-	var nodesOut []*tools.Node
-	var wgPing sync.WaitGroup
+func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Node, float64, error){
 	var threadNum int
 
 	allLen := len(nodesIn)
+	if allLen == 0 {
+		return nil, nil, nil, 0, nil
+	}
 	pingJob := make(chan *tools.Node, allLen)
 	pingResult := make(chan *tools.Node, allLen)
 
@@ -26,31 +26,9 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, float64, error){
 		threadNum = tools.PThreadNum
 	}
 
-	//Put vms into pingJob
-//	switch strType {
-//	case "vmess": 
-//		for _, s := range linksIn {
-//			var n tools.Node
-//			//n.Init(strconv.Itoa(i), "vmess", s)
-//			n.Init("vmess", s)
-//			pingJob <- &n
-//			wgPing.Add(1)
-//		}
-//	//Put sses into pingJob
-//	case "ss":
-//		for _, s := range linksIn {
-//			var n tools.Node
-//			//n.Init(strconv.Itoa(i + vmLen), "ss", s)
-//			n.Init("ss", s)
-//			pingJob <- &n
-//			wgPing.Add(1)
-//		}
-//	}
-
 	//Put nodesIn into pingJob
 	for _, n := range nodesIn {
 		pingJob <- n
-		wgPing.Add(1)
 	}
 
 	//var ports []int
@@ -59,34 +37,40 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, float64, error){
 		log.Fatal(err)
 	}
 
-	log.Println("starting goroutine")
 	for i := 1; i <= threadNum; i++ {
-		go myPing(&wgPing, pingJob, pingResult, ports[i-1])
+		go myPing(pingJob, pingResult, ports[i-1])
 	}
 	close(pingJob)
 
 
 	log.Println("waiting for goroutine")
 	start := time.Now()
-	wgPing.Wait()
+
+	log.Println("length of all", allLen)
+	var goodPingNodes, badPingNodes, errorNodes []*tools.Node
+	for i:=0; i< allLen; i++ {
+		n := <- pingResult
+		if n.AvgDelay == -1 {
+			n.Timeout += 1
+			badPingNodes = append(badPingNodes, n)
+		}else if n.AvgDelay == -2 {
+			//log.Println("-2 error:", n.ErrorInfo)
+			n.Timeout = -1
+			errorNodes = append(errorNodes, n)
+		}else{
+			n.Timeout = 0
+			goodPingNodes = append(goodPingNodes, n)
+		}
+	}
 	stop := time.Now()
 	elapsed := stop.Sub(start)
 	timeOfPing := elapsed.Seconds()
-
 	log.Println("goroutine finished")
-
-	goodPingCnt := len(pingResult)
-	log.Printf("There are %d good pings\n", goodPingCnt)
-
-	for i := 1; i <= goodPingCnt; i++  {
-		n := <-pingResult
-		nodesOut = append(nodesOut, n)
-	}
 	
-	return nodesOut, timeOfPing, nil 
+	return goodPingNodes, badPingNodes, errorNodes, timeOfPing, nil 
 }
 
-func myPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
+func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 	fixedPort := port
 	pClient := tools.HttpClientGet(fixedPort, tools.PTimeout)
 	pRealClient := tools.HttpClientGet(fixedPort, tools.PRealTimeout)
@@ -95,14 +79,29 @@ func myPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.No
 		var x tools.Xray
 
 		n.Port = fixedPort
-		n.CreateJson(tools.TempPath)
-		err := x.Init(fixedPort, (*n).JsonPath)
+		err := n.CreateJson(tools.TempPath)
 		if err != nil {
-			log.Fatal(err)
+			n.AvgDelay = -2
+			result <- n
+			err = fmt.Errorf("n.CreateJson:", err)
+			n.ErrorInfo = err
+			continue
+		}
+		err = x.Init(fixedPort, (*n).JsonPath)
+		if err != nil {
+			n.AvgDelay = -2
+			result <- n
+			err = fmt.Errorf("x.Init:", err)
+			n.ErrorInfo = err
+			continue
 		}
 		_, err = x.Run()
 		if err != nil {
-			log.Fatal(err)
+			n.AvgDelay = -2
+			result <- n
+			err = fmt.Errorf("x.Run:", err)
+			n.ErrorInfo = err
+			continue
 		}
 
 		var cookie []*http.Cookie
@@ -110,70 +109,65 @@ func myPing(wg *sync.WaitGroup, jobs <-chan *tools.Node, result chan<- *tools.No
 
 		for i := 0; i < tools.PCnt; i++ {
 			_, code, _, err := doPing(pClient, "https://www.google.com/gen_204", nil, false)
-			time.Sleep(time.Millisecond * 200)
 			if err != nil {
 				if code != 0 {
 					//log.Println("ping error: code:", code, err)
 				}
 				fail += 1
 			}
+			time.Sleep(time.Millisecond * 200)
 		}
 
 		if fail <= tools.PingAllowFail {
-			//log.Println("P good")
-			//var pRealTotalDelay int
 			var pRealAvgDelay int
-			//var success int
 			var pRealDelayList []int
 
 			for i := 0; i < tools.PRealCnt; i++{
 				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
 				delay, _, coo, err := doPing(pRealClient, "https://duckduckgo.com", cookie, true)
-				time.Sleep(time.Millisecond * 200)
-				//if err != nil && code != 429{
 				if err != nil {
-					//log.Println("PingReal error: code:", code, err)
-					//time.Sleep(50*time.Millisecond)
 				}else{
-					//if len(coo) != 0 && len(cookie) == 0 {
 					if len(coo) != 0 {
 						cookie = coo
 					}
-					//log.Println(delay)
-					//pRealTotalDelay += delay
 					pRealDelayList = append(pRealDelayList, delay)
-					//success += 1
-					//if success >= 5 {
-					//	break
-					//}
 				}
+				time.Sleep(time.Millisecond * 200)
 			}
-			//if (tools.PRealCnt-success) <= tools.PRealAllowFail {
-			//	pRealAvgDelay = pRealTotalDelay / success
-			//	n.AvgDelay = pRealAvgDelay
-			//	log.Println("ping got one!", "delay:", pRealAvgDelay)
-			//	result <- n
-			//}
 			if len(pRealDelayList) >= tools.PRealLeastNeeded {
 				pRealAvgDelay = getAvg(pRealDelayList)
 				n.AvgDelay = pRealAvgDelay
 				log.Println("ping got one!", n.Type, "delay:", pRealAvgDelay)
 				result <- n
+			}else{
+				n.AvgDelay = -1
+				result <- n
 			}
+		}else{
+			n.AvgDelay = -1
+			result <- n
 		}
 
 		err = x.Stop()
 		if err != nil {
-			log.Fatal(err)
+			n.AvgDelay = -2
+			result <- n
+			err = fmt.Errorf("x.Stop:", err)
+			n.ErrorInfo = err
+			continue
+			//log.Fatal(err)
 		}
-		wg.Done()
 	}
 }
 
 func doPing(myClient http.Client, url string, cookies []*http.Cookie, pReal bool) (int, int, []*http.Cookie, error){
 	var coo []*http.Cookie
 
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		err = fmt.Errorf("http.NewRequest:", err)
+		return 0, 0, nil, err
+	}
 	if pReal {
 		for i := range cookies {
 			req.AddCookie(cookies[i])
