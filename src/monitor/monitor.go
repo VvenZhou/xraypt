@@ -55,6 +55,7 @@ var preStatus int
 func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
 	cmdToRoutineCh := make(chan bool)
+	feedbackFromRoutineCh := make(chan bool)
 	var ticker *time.Ticker
 
 	curStatus = 0
@@ -106,8 +107,25 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 				log.Println("Cmd: Print")
 				//stopCurrentAction()
 			case "quit" :
+				feedbackCh <- 1		//busy
 				log.Println("Cmd: Quit")
-				//quitProgram()
+
+				if curStatus == 1 {
+					ticker.Stop()
+				}
+
+				cmdToDaemonCh <- "TERM"
+				log.Println("XrayDaemon quit:", <- feedbackFromDaemonCh)
+
+				if curStatus == 1 {
+					cmdToRoutineCh <- true 
+					log.Println("Routine quit:", <- feedbackFromRoutineCh)
+				}
+
+				feedbackCh <- 0		//ready
+				log.Println("Auto monitor quit")
+				return
+
 			case "auto" :
 				feedbackCh <- 1		//busy
 				log.Println("Cmd: Auto")
@@ -130,6 +148,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 						for {
 							select {
 							case <-cmdToRoutineCh :
+								feedbackFromRoutineCh <- true
 								return
 							case <-ticker.C :
 								ticker.Stop()
@@ -217,20 +236,27 @@ func fetchNewNodesToFile() {
 }
 
 func routine() {
+	var firstBenchGoodFlag bool
 	log.Println("\n", "In routine")
 	log.Println("FirstBench ping")
 	(*FirstBench).Refresh()
+	if len(FirstBench.GoodNodes) > 0 {
+		firstBenchGoodFlag = true
+	}else{
+		firstBenchGoodFlag = false
+	}
 
 	log.Println("CurrentNode ping")
 	goodPingNodes, _, _, _, _ := ping.XrayPing([]*tools.Node{CurrentNode})
 	if goodPingNodes == nil {
-		//Stop XrayDaemon
 		cmdToDaemonCh <- "TERM"
 		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
 
-		CurrentNode = FirstBench.GoodNodes[0]
-		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
-		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+		if firstBenchGoodFlag == true {
+			CurrentNode = FirstBench.GoodNodes[0]
+			go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+			log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+		}
 	}
 
 
@@ -241,14 +267,17 @@ func routine() {
 		nodeStack, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
 		nodeStackPop(&nodeStack, FirstBench.PreLength)	//remove old firstBench nodes
 
-		if len(nodeStack) == benchSize {
-			refresh([]string{ "bad" })
-		}
+//		if len(nodeStack) == benchSize {
+//			refresh([]string{ "bad" })
+//		}
 
 		var bench Bench
 		updateOneBenchFromStackR(&bench, &nodeStack)
 
 		for count > 0 {
+			if len(nodeStack) <= benchSize {
+				refresh([]string{ "bad" })
+			}
 			good2 := len(bench.GoodNodes)
 			if good2 >= count {
 				log.Println("got enough nodes to append")
@@ -282,53 +311,14 @@ func routine() {
 
 		tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
 
-//		var benchBuf *Bench
-//		benchBuf = new(Bench)
-//		benchBuf.GoodNodes = append(benchBuf.GoodNodes, nodeStackPop(&stack, count)...)
-//		log.Println("benchBuf ping")
-//		(*benchBuf).Refresh()
-//		//for count >= benchSize/2 {
-//		for count > 0 {
-//			good2 := len(benchBuf.GoodNodes)
-//			if good2 >= count {	//benchBuf has enough GoodNodes to add to FirstBench
-//				log.Println("got enough nodes to append")
-//				FirstBench.GoodNodes = append(FirstBench.GoodNodes, benchBuf.GoodNodes[:count]...)
-//				benchBuf.GoodNodes = benchBuf.GoodNodes[:count]
-//				count = 0
-//			}else{		//benchBuf dosn't have enough GoodNodes that fit in FirstBench
-//				if good2 > 0 {
-//					log.Println("got nodes to append")
-//					FirstBench.GoodNodes = append(FirstBench.GoodNodes, benchBuf.GoodNodes...)
-//					count = count - good2
-//					log.Println("count:", count)
-//					(*benchBuf).Clean()
-//
-//					benchBuf.GoodNodes = append(benchBuf.GoodNodes, nodeStackPop(&stack, count)...)
-//					log.Println("benchBuf ping")
-//					(*benchBuf).Refresh()
-//				}else{
-//					log.Println("no good Nodes in benchBuf")
-//					log.Println("count:", count)
-//					(*benchBuf).Clean()
-//
-//					benchBuf.GoodNodes = append(benchBuf.GoodNodes, nodeStackPop(&stack, count)...)
-//					log.Println("benchBuf ping")
-//					(*benchBuf).Refresh()
-//				}
-//			}
-//		}
-//
-//		(*benchBuf).Clean()
-//		nodeStackPush(&stack, benchBuf.GoodNodes)
-//		benchBuf.GoodNodes = nil
-//
-//		(*FirstBench).Clean()
-//		FirstBench.PreLength = len(FirstBench.GoodNodes)
-//		nodeStackPush(&stack, FirstBench.GoodNodes)
-//
-//		tools.WriteNodesToFormatedFile(tools.GoodOutPath, stack)
 	}else{
 		(*FirstBench).Clean()
+	}
+
+	if firstBenchGoodFlag == false {
+		CurrentNode = FirstBench.GoodNodes[0]
+		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
 	}
 
 	//Write back BadOutFile
@@ -462,6 +452,7 @@ func refresh(options []string) {
 
 			badNodes := append(badPingNodes, oldBadNodes...)
 
+			sort.Stable(tools.ByDelay(goodPingNodes))
 
 			tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
 			tools.WriteNodesToFormatedFile(tools.BadOutPath, badNodes)

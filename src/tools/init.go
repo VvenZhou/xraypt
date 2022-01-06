@@ -19,6 +19,8 @@ var GoodOutPath string
 var BadOutPath string
 var ErrorOutPath string
 
+var LogPath string
+
 var TempPath string
 var JsonsPath string
 var HalfJsonsPath string
@@ -91,6 +93,8 @@ func gVarInit(port int){
 		GoodOutPath = "out/goodOut.txt"
 		BadOutPath = "out/badOut.txt"
 		ErrorOutPath = "out/errorOut.txt"
+
+		LogPath = "out/log.txt"
 
 		SubsFilePath = "config/subs.txt"
 	}else{

@@ -8,6 +8,9 @@ import (
 	"strings"
 	"os"
 	"bufio"
+	"os/exec"
+	"syscall"
+	"time"
 
 	"github.com/VvenZhou/xraypt/src/ping"
 	"github.com/VvenZhou/xraypt/src/speedtest"
@@ -27,6 +30,11 @@ var protocols = []string{
 func main() {
 
 	tools.PreCheck(tools.MainPort, protocols)
+
+	logf, logCmd := startLogSystem()
+	defer logf.Close()
+	defer stopCmd(logCmd)
+
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
@@ -83,6 +91,16 @@ func main() {
 			cmdCh <- "print"
 		case "quit" :
 			cmdCh <- "quit"
+
+			for f := <-feedbackCh; f != 0; f = <-feedbackCh{
+				//TODO: Monitor not ready
+			}
+
+			os.RemoveAll(tools.TempPath)
+			os.MkdirAll(tools.TempPath, 0755)
+
+			time.Sleep(100 * time.Millisecond)
+			return
 		case "auto" :
 			cmdCh <- "auto"
 		case "manual" :
@@ -94,9 +112,6 @@ func main() {
 			goto getInput
 		}
 	}
-
-	os.RemoveAll(tools.TempPath)
-	os.MkdirAll(tools.TempPath, 0755)
 }
 
 func oldmain() {
@@ -208,4 +223,36 @@ func generateSpeedOutFile(nodes []*tools.Node) {
 		}
 	}
 
+}
+
+func startLogSystem() (*os.File, *exec.Cmd) {
+	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.SetOutput(f)
+
+	dir, _ := os.Getwd()
+	fullPath := fmt.Sprintf("%s/%s", dir, tools.LogPath)
+
+	cmd := exec.Command("gnome-terminal", "--", "tools/tail.sh", fullPath)
+	err = cmd.Start()
+	if err != nil {
+		f.Close()
+		log.Fatal(err)
+	}
+
+	return f, cmd
+}
+
+func stopCmd(cmd *exec.Cmd) {
+	err := cmd.Process.Signal(syscall.SIGTERM)
+
+	_, err = cmd.Process.Wait()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("LogSystem quit")
 }
