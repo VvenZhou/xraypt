@@ -50,10 +50,10 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 	var goodPingNodes, badPingNodes, errorNodes []*tools.Node
 	for i:=0; i< allLen; i++ {
 		n := <- pingResult
-		if n.AvgDelay == -1 {
+		if n.AvgDelay == 9999 {
 			n.Timeout += 1
 			badPingNodes = append(badPingNodes, n)
-		}else if n.AvgDelay == -2 {
+		}else if n.AvgDelay == -1 {
 			//log.Println("-2 error:", n.ErrorInfo)
 			n.Timeout = -1
 			errorNodes = append(errorNodes, n)
@@ -81,7 +81,7 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 		n.Port = fixedPort
 		err := n.CreateJson(tools.TempPath)
 		if err != nil {
-			n.AvgDelay = -2
+			n.AvgDelay = -1
 			result <- n
 			err = fmt.Errorf("n.CreateJson:", err)
 			n.ErrorInfo = err
@@ -89,7 +89,7 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 		}
 		err = x.Init(fixedPort, (*n).JsonPath)
 		if err != nil {
-			n.AvgDelay = -2
+			n.AvgDelay = -1
 			result <- n
 			err = fmt.Errorf("x.Init:", err)
 			n.ErrorInfo = err
@@ -97,7 +97,7 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 		}
 		_, err = x.Run()
 		if err != nil {
-			n.AvgDelay = -2
+			n.AvgDelay = -1
 			result <- n
 			err = fmt.Errorf("x.Run:", err)
 			n.ErrorInfo = err
@@ -140,17 +140,17 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 				log.Println("ping got one!", n.Type, "delay:", pRealAvgDelay)
 				result <- n
 			}else{
-				n.AvgDelay = -1
+				n.AvgDelay = 9999
 				result <- n
 			}
 		}else{
-			n.AvgDelay = -1
+			n.AvgDelay = 9999
 			result <- n
 		}
 
 		err = x.Stop()
 		if err != nil {
-			n.AvgDelay = -2
+			n.AvgDelay = -1
 			result <- n
 			err = fmt.Errorf("x.Stop:", err)
 			n.ErrorInfo = err

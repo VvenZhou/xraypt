@@ -64,7 +64,7 @@ func (l *Links) AddToNodeLists(nodeLs *NodeLists) {
 func GetAllNodes(nodeLs *NodeLists) {
 	// Get nodes from GoodOut.txt && 
 	GetNodeLsFromFormatedFile(nodeLs, GoodOutPath)
-	//GetNodeLsFromFormatedFile(nodeLs, BadOutPath)
+	GetNodeLsFromFormatedFile(nodeLs, BadOutPath)
 
 	var subs []string
 	var subLs Links
@@ -340,9 +340,11 @@ func GetNodesFromFormatedFile(filePath string) ([]*Node, error) {
 		var node Node
 		s := strings.Split(str, ",")
 		i, _ := strconv.Atoi(s[0])
+		t, _ := strconv.Atoi(s[1])
 		node.AvgDelay = i 
-		node.Type = s[1]
-		node.ShareLink = s[2]
+		node.Timeout = t
+		node.Type = s[2]
+		node.ShareLink = s[3]
 		nodes = append(nodes, &node)
 	}
 	return nodes, nil
@@ -356,7 +358,7 @@ func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
 	}
 
 	for _, n := range nodes {
-		str := []string{strconv.Itoa(n.AvgDelay), n.Type, n.ShareLink}
+		str := []string{strconv.Itoa(n.AvgDelay), strconv.Itoa(n.Timeout), n.Type, n.ShareLink}
 		row := strings.Join(str, ",")
 		rows = append(rows, row)
 	}
@@ -370,7 +372,6 @@ func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
 		log.Println(filePath, "generated!")
 		return nil
 	}
-
 }
 
 func getStrFromSublink(subLink string) ([]string, error) {

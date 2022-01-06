@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"os"
+	"bufio"
 
 	"github.com/VvenZhou/xraypt/src/ping"
 	"github.com/VvenZhou/xraypt/src/speedtest"
@@ -25,23 +26,74 @@ var protocols = []string{
 
 func main() {
 
-//	oldmain()
 	tools.PreCheck(tools.MainPort, protocols)
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
 
 	cmdCh := make(chan string)	
-	feedbackCh := make(chan int)	
+	feedbackCh := make(chan int)		//0 for ready to go, 1 for busy, 2 for error
+	dataCh := make(chan string, 3)
 
-	go monitor.AutoMonitor(cmdCh, feedbackCh)
+	scanner := bufio.NewScanner(os.Stdin)
 
-	cmdCh <- "Auto"
+	go monitor.AutoMonitor(cmdCh, feedbackCh, dataCh)
+
 
 	for {
-		log.Println(<- feedbackCh)
-	}
+		for f := <-feedbackCh; f != 0; f = <-feedbackCh{
+			//TODO: Monitor not ready
+		}
 
+		var sList []string
+		getInput: for {
+			//TODO: print input Prompt
+			fmt.Printf("Enter command:")
+
+			scanner.Scan()
+			sList = strings.Fields(scanner.Text())
+			l := len(sList)
+			if l != 0 {
+				break
+			}
+		}
+		switch sList[0] {
+		case "refresh" :
+			datas := []string{"bench", ""}
+
+			for i, s := range sList[1:] {
+				switch s {
+				case "bench", "good", "bad", "all":
+					datas[i] = s
+				default:
+					log.Println("bad data")
+					goto getInput
+				}
+			}
+
+			dataCh <- datas[0]
+			dataCh <- datas[1]
+
+			cmdCh <- "refresh"
+		case "fetch" :
+			cmdCh <- "fetch"
+		case "pause" :
+			cmdCh <- "pause"
+		case "print" :
+			cmdCh <- "print"
+		case "quit" :
+			cmdCh <- "quit"
+		case "auto" :
+			cmdCh <- "auto"
+		case "manual" :
+			cmdCh <- "manual"
+		case "help" :
+		case "clear" :
+		default:
+			log.Println("bad cmd")
+			goto getInput
+		}
+	}
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
@@ -110,6 +162,7 @@ func oldmain() {
 	os.MkdirAll(tools.TempPath, 0755)
 }
 
+//Not used
 func generatePingOutFile(nodes []*tools.Node) {
 	var link []string
 	for i, n := range nodes {
@@ -129,6 +182,7 @@ func generatePingOutFile(nodes []*tools.Node) {
 	}
 }
 
+//Not used
 func generateSpeedOutFile(nodes []*tools.Node) {
 	var goodVmLinks []string
 	for i, n := range nodes {

@@ -52,6 +52,70 @@ func (n *Node) Init(ntype, shareLink string) {
 }
 
 func (n *Node) CreateJson(dirPath string) error {
+	err := (*n).createConfig()
+	if err != nil {
+		err = fmt.Errorf("createConfig:", err)
+		return err
+	}
+
+	name := uuid.New().String()
+	s := []string{dirPath, strings.TrimSpace(string(name)), ".json"}
+	n.JsonPath = strings.Join(s, "")
+
+	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
+	if err != nil {
+		err = fmt.Errorf("json.MarshalIndent:", err)
+		return err
+	}
+
+	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
+	if err != nil {
+		err = fmt.Errorf("WriteFile:", err)
+		return err
+	}
+
+	err = JsonChangePort(n.JsonPath, n.JsonPath, n.Port)
+	if err != nil {
+		err = fmt.Errorf("JsonChangePort:", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *Node) CreateFinalJson(dirPath string, name string) error {
+	err := (*n).createConfig()
+	if err != nil {
+		err = fmt.Errorf("createConfig:", err)
+		return err
+	}
+	GenFinalConfig(n.Con)
+
+	s := []string{dirPath, name}
+	n.JsonPath = strings.Join(s, "")
+
+	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	err = JsonChangePort(n.JsonPath, n.JsonPath, n.Port)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *Node) createConfig() error {
 	var con Config
 	switch n.Type{
 		case "vmess": 
@@ -80,51 +144,5 @@ func (n *Node) CreateJson(dirPath string) error {
 			return errors.New("unknown node type")
 	}
 
-	out := uuid.New().String()
-	s := []string{dirPath, strings.TrimSpace(string(out)), ".json"}
-	n.JsonPath = strings.Join(s, "")
-
-	byteValue, err := json.MarshalIndent(con, "", "    ")
-	if err != nil {
-		err = fmt.Errorf("json.MarshalIndent:", err)
-		return err
-	}
-
-	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
-	if err != nil {
-		err = fmt.Errorf("WriteFile:", err)
-		return err
-	}
-
-	err = JsonChangePort(n.JsonPath, n.JsonPath, n.Port)
-	if err != nil {
-		err = fmt.Errorf("JsonChangePort:", err)
-		return err
-	}
-
 	return nil
 }
-
-func (n *Node) CreateFinalJson(dirPath string, name string) {
-	GenFinalConfig(n.Con)
-
-	s := []string{dirPath, name, ".json"}
-	n.JsonPath = strings.Join(s, "")
-
-	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
-	if err != nil {
-		log.Println(err)
-	}
-
-	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
-	if err != nil {
-		log.Println(err)
-	}
-
-	err = JsonChangePort(n.JsonPath, n.JsonPath, MainPort)
-	if err != nil {
-		log.Println(err)
-	}
-}
-
-

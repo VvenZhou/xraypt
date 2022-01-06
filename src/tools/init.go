@@ -26,6 +26,7 @@ var BackupPath string
 var ConfigPath string
 var OutPath string
 
+var Mode int
 
 var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
@@ -33,19 +34,20 @@ var PThreadNum = 150
 const SThreadNum = 10
 const DSLine = 2.0
 
-const PCnt = 5
-const PingAllowFail = 3
+const PCnt = 3
+const PingAllowFail = 2
 
-const PRealCnt = 8
-const PRealLeastNeeded = 5	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
+const PRealCnt = 5
+const PRealLeastNeeded = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
 
+const NodeTimeoutTolerance = 3
 
 const subT = 5000
 const pT = 2000 //ms
-const pRealT = 1000 //ms
+const pRealT = 1500 //ms
 const sT = 15000 //ms
 
-var RoutinePeriod = 300		// seconds
+var RoutinePeriod = 180		// seconds
 
 var RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
 
