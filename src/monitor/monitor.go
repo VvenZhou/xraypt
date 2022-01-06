@@ -52,6 +52,8 @@ var BadNodesBuffer []*tools.Node
 var curStatus int
 var preStatus int
 
+var daemonStatus int
+
 func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
 	cmdToRoutineCh := make(chan bool)
@@ -101,8 +103,25 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 				}
 				feedbackCh <- 0
 			case "pause" :
+				feedbackCh <- 1		//busy
 				log.Println("Cmd: Pause")
-				//stopDaemon()
+
+				switch daemonStatus {
+				case 0 :
+					if curStatus == 1 {
+						ticker.Reset(tools.RoutinePeriodDu)
+					}
+					xrayDaemonStartStop("start")
+					//log.Println("XrayDaemon start")
+				case 1 :
+					if curStatus == 1 {
+						ticker.Stop()
+					}
+					xrayDaemonStartStop("stop")
+					//log.Println("XrayDaemon stop")
+				}
+				feedbackCh <- 0		//busy
+
 			case "print" :
 				log.Println("Cmd: Print")
 				//stopCurrentAction()
@@ -114,8 +133,9 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 					ticker.Stop()
 				}
 
-				cmdToDaemonCh <- "TERM"
-				log.Println("XrayDaemon quit:", <- feedbackFromDaemonCh)
+				xrayDaemonStartStop("stop")
+//				cmdToDaemonCh <- "TERM"
+//				log.Println("XrayDaemon quit:", <- feedbackFromDaemonCh)
 
 				if curStatus == 1 {
 					cmdToRoutineCh <- true 
@@ -215,8 +235,9 @@ func firstIn() {
 	nodeStackPush(&nodeStack, FirstBench.GoodNodes)
 	tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
 
-	go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
-	log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+	xrayDaemonStartStop("start")
+//	go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+//	log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
 
 	log.Println("Init done")
 }
@@ -249,13 +270,17 @@ func routine() {
 	log.Println("CurrentNode ping")
 	goodPingNodes, _, _, _, _ := ping.XrayPing([]*tools.Node{CurrentNode})
 	if goodPingNodes == nil {
-		cmdToDaemonCh <- "TERM"
-		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+
+		xrayDaemonStartStop("stop")
+//		cmdToDaemonCh <- "TERM"
+//		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
 
 		if firstBenchGoodFlag == true {
 			CurrentNode = FirstBench.GoodNodes[0]
-			go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
-			log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+
+			xrayDaemonStartStop("start")
+//			go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+//			log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
 		}
 	}
 
@@ -317,8 +342,9 @@ func routine() {
 
 	if firstBenchGoodFlag == false {
 		CurrentNode = FirstBench.GoodNodes[0]
-		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
-		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+		xrayDaemonStartStop("start")
+//		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+//		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
 	}
 
 	//Write back BadOutFile
@@ -399,6 +425,19 @@ func nodeStackPop(stack *[]*tools.Node, num int) []*tools.Node {
 		return nil
 	}
 	return nodes
+}
+
+func xrayDaemonStartStop(cmd string) {
+	switch cmd {
+	case "start" :
+		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+		daemonStatus = 1
+	case "stop" :
+		cmdToDaemonCh <- "TERM"
+		log.Println("XrayDaemon quit:", <- feedbackFromDaemonCh)
+		daemonStatus = 0
+	}
 }
 
 //not used yet

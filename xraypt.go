@@ -107,6 +107,10 @@ func main() {
 			cmdCh <- "manual"
 		case "help" :
 		case "clear" :
+			cmd := exec.Command("clear")
+			cmd.Stdout = os.Stdout
+			cmd.Run()
+			goto getInput
 		default:
 			log.Println("bad cmd")
 			goto getInput
