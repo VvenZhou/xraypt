@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"sort"
 	"strconv"
 	"strings"
 	"os"
@@ -12,8 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/VvenZhou/xraypt/src/ping"
-	"github.com/VvenZhou/xraypt/src/speedtest"
 	"github.com/VvenZhou/xraypt/src/tools"
 	"github.com/VvenZhou/xraypt/src/monitor"
 )
@@ -47,16 +44,14 @@ func main() {
 
 	go monitor.AutoMonitor(cmdCh, feedbackCh, dataCh)
 
+	<- feedbackCh
 
 	for {
-		for f := <-feedbackCh; f != 0; f = <-feedbackCh{
-			//TODO: Monitor not ready
-		}
 
 		var sList []string
 		getInput: for {
 			//TODO: print input Prompt
-			fmt.Printf("Enter command:")
+			fmt.Printf("Enter command: ")
 
 			scanner.Scan()
 			sList = strings.Fields(scanner.Text())
@@ -67,6 +62,7 @@ func main() {
 		}
 		switch sList[0] {
 		case "refresh" :
+
 			datas := []string{"bench", ""}
 
 			for i, s := range sList[1:] {
@@ -83,18 +79,22 @@ func main() {
 			dataCh <- datas[1]
 
 			cmdCh <- "refresh"
+
+			<- feedbackCh
+
 		case "fetch" :
 			cmdCh <- "fetch"
+
+			<- feedbackCh
 		case "pause" :
 			cmdCh <- "pause"
+			<- feedbackCh
 		case "print" :
 			cmdCh <- "print"
 		case "quit" :
 			cmdCh <- "quit"
 
-			for f := <-feedbackCh; f != 0; f = <-feedbackCh{
-				//TODO: Monitor not ready
-			}
+			<- feedbackCh
 
 			os.RemoveAll(tools.TempPath)
 			os.MkdirAll(tools.TempPath, 0755)
@@ -103,10 +103,20 @@ func main() {
 			return
 		case "auto" :
 			cmdCh <- "auto"
+			<- feedbackCh
 		case "manual" :
 			cmdCh <- "manual"
 		case "help" :
-		case "clear" :
+		case "clear", "clr" :
+//			for i, s := range sList[1:] {
+//				switch s {
+//				case "log" :
+//				default:
+//					log.Println("bad data")
+//					goto getInput
+//				}
+//			}
+
 			cmd := exec.Command("clear")
 			cmd.Stdout = os.Stdout
 			cmd.Run()
@@ -114,89 +124,6 @@ func main() {
 		default:
 			log.Println("bad cmd")
 			goto getInput
-		}
-	}
-}
-
-func oldmain() {
-	tools.PreCheck(tools.MainPort, protocols)
-
-	os.RemoveAll(tools.TempPath)
-	os.MkdirAll(tools.TempPath, 0755)
-
-
-
-	//Get subscription links
-	var subNLs tools.NodeLists
-	tools.GetAllNodes(&subNLs)
-
-	var allNodes []*tools.Node
-	allNodes = append(subNLs.Vms, subNLs.Sses...)
-
-	log.Println("Subs get done!")
-
-
-
-	//Ping Tests
-	goodPingNodes, badPingNodes, _, pingTime, _ := ping.XrayPing(allNodes)
-
-
-	for i, n := range goodPingNodes {
-		fmt.Println(i, n.AvgDelay)
-	}
-	fmt.Println("good:", len(goodPingNodes), "bad:", len(badPingNodes))
-
-	os.Exit(0)
-
-
-	//Generate halfGoodNodes
-	generatePingOutFile(goodPingNodes)
-
-	os.RemoveAll(tools.TempPath)
-	os.MkdirAll(tools.TempPath, 0755)
-
-
-	//Speed Tests
-	goodSpeedNodes, timeOfSpeed, _ := speedtest.XraySpeedTest(goodPingNodes)
-
-
-	//Sort Nodes
-	sort.Stable(tools.ByDelay(goodSpeedNodes))
-	//sort.Sort(tools.ByULSpeed(goodSpeedNodes))
-	sort.Stable(tools.ByDLSpeed(goodSpeedNodes))
-
-
-	//Generate speedOut.txt
-	generateSpeedOutFile(goodSpeedNodes)
-
-
-	//Time Counting
-	log.Println("-------------------")
-	log.Println("Ping spent", pingTime, "s...")
-	log.Println("Speedtest spent", timeOfSpeed, "s...")
-
-
-
-	os.RemoveAll(tools.TempPath)
-	os.MkdirAll(tools.TempPath, 0755)
-}
-
-//Not used
-func generatePingOutFile(nodes []*tools.Node) {
-	var link []string
-	for i, n := range nodes {
-		n.CreateFinalJson(tools.HalfJsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", n.Type, "://", n.ShareLink, "\nDelay:", strconv.Itoa(n.AvgDelay)}
-		vmOutStr := strings.Join(str, "")
-		link = append(link, vmOutStr)
-	}
-	if len(link) != 0 {
-		bytes := []byte(strings.Join(link[:], "\n"))
-		err := os.WriteFile(tools.PingOutPath, bytes, 0644)
-		if err != nil {
-			log.Println(err)
-		}else{
-			log.Println("pingOut generated!")
 		}
 	}
 }
@@ -258,5 +185,5 @@ func stopCmd(cmd *exec.Cmd) {
 		log.Fatal(err)
 	}
 
-	log.Println("LogSystem quit")
+	log.Println("LogSystem quit", "\n")
 }

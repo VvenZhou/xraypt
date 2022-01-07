@@ -49,7 +49,7 @@ const pT = 2000 //ms
 const pRealT = 1500 //ms
 const sT = 15000 //ms
 
-var RoutinePeriod = 180		// seconds
+var RoutinePeriod = 300		// seconds
 
 var RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
 
