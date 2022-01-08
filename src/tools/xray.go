@@ -67,6 +67,7 @@ func (x *Xray) Init(port int, jsonPath string) error {
 
 func (x *Xray) Run() (io.ReadCloser, error) {
 	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
+	x.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	stdout, err := x.cmd.StdoutPipe()
 	if err != nil {
 		return nil, err

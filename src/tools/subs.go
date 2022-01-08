@@ -64,7 +64,19 @@ func (l *Links) AddToNodeLists(nodeLs *NodeLists) {
 func GetAllNodes(nodeLs *NodeLists) {
 	// Get nodes from GoodOut.txt && 
 	GetNodeLsFromFormatedFile(nodeLs, GoodOutPath)
-	GetNodeLsFromFormatedFile(nodeLs, BadOutPath)
+
+	var nodeLs2 NodeLists
+	GetNodeLsFromFormatedFile(&nodeLs2, BadOutPath)
+	for _, node := range nodeLs2.Vms {
+		if node.Timeout < 10 {
+			nodeLs.Vms = append(nodeLs.Vms, node)
+		}
+	}
+	for _, node := range nodeLs2.Sses {
+		if node.Timeout < 10 {
+			nodeLs.Sses = append(nodeLs.Sses, node)
+		}
+	}
 
 	var subs []string
 	var subLs Links

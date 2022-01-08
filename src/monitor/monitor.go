@@ -66,7 +66,7 @@ var preStatus int
 
 var daemonStatus int		//0 for stopped, 1 for started
 
-func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan string) {
+func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
 	var ticker *time.Ticker
 
@@ -80,7 +80,8 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 
 	firstIn()
 
-	feedbackCh <- 0
+	feedbackCh <- true
+
 	for {
 		select {
 		case cmd := <-cmdCh :
@@ -105,7 +106,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 				}
 
 				mu.Unlock()
-				feedbackCh <- 0
+				feedbackCh <- true
 			case "fetch" :
 				mu.Lock()
 
@@ -120,14 +121,14 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 					break
 				}
 
-				fetchNewNodesToFile()
+				fetchNew()
 
 				if curStatus == 1 {
 					ticker.Reset(tools.RoutinePeriodDu)
 				}
 
 				mu.Unlock()
-				feedbackCh <- 0
+				feedbackCh <- true
 			case "pause" :
 				mu.Lock()
 
@@ -147,7 +148,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 				}
 
 				mu.Unlock()
-				feedbackCh <- 0
+				feedbackCh <- true
 			case "print" :
 				log.Println("Cmd: Print")
 				//stopCurrentAction()
@@ -167,7 +168,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 				}
 
 				log.Println("Auto monitor quit")
-				feedbackCh <- 0		//ready
+				feedbackCh <- true		//ready
 				return
 
 			case "auto" :
@@ -203,7 +204,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- int, dataCh <-chan strin
 				}
 
 				mu.Unlock()
-				feedbackCh <- 0
+				feedbackCh <- true
 			case "manual" :
 //				log.Println("Cmd: Manual")
 //				curStatus = 2
@@ -249,7 +250,7 @@ func firstIn() {
 	FirstBench = &bench
 
 	(*FirstBench).Clean()
-	FirstBench.PreLength = 0
+	FirstBench.PreLength = len(FirstBench.GoodNodes)
 	nodeStackPush(&nodeStack, FirstBench.GoodNodes)
 	tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
 
@@ -258,13 +259,19 @@ func firstIn() {
 	log.Println("FirstIn done")
 }
 
-func fetchNewNodesToFile() {
+func fetchNew() {
 
 	log.Println("start oneShot")
 	goodPingNodes, badPingNodes, errorNodes := oneShot()
 	log.Println("oneShot done")
 
 	sort.Stable(tools.ByDelay(goodPingNodes))
+
+	CurrentNode = goodPingNodes[0]
+	FirstBench.GoodNodes = goodPingNodes[:benchSize]
+
+	(*FirstBench).Clean()
+	FirstBench.PreLength = benchSize
 
 	tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
 	tools.WriteNodesToFormatedFile(tools.BadOutPath, badPingNodes)
@@ -371,6 +378,7 @@ func oneShot() ([]*tools.Node, []*tools.Node, []*tools.Node) {
 	//Get subscription links
 	var nodeLs tools.NodeLists
 	tools.GetAllNodes(&nodeLs)
+	
 
 	var allNodes []*tools.Node
 	allNodes = append(nodeLs.Vms, nodeLs.Sses...)

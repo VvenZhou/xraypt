@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"os"
+	"io"
 	"bufio"
 	"os/exec"
-	"syscall"
 	"time"
 
 	"github.com/VvenZhou/xraypt/src/tools"
@@ -23,40 +23,42 @@ var protocols = []string{
 	"ssr",
 	"trojan"}
 
+var status bool
+
+var LogLineNum = 40
 
 func main() {
 
 	tools.PreCheck(tools.MainPort, protocols)
 
-	logf, logCmd := startLogSystem()
+	logf := startLogSystem()
 	defer logf.Close()
-	defer stopCmd(logCmd)
+	defer fmt.Printf("\n")
+//	defer stopCmd(logCmd)
 
 
 	os.RemoveAll(tools.TempPath)
 	os.MkdirAll(tools.TempPath, 0755)
 
 	cmdCh := make(chan string)	
-	feedbackCh := make(chan int)		//0 for ready to go, 1 for busy, 2 for error
+	feedbackCh := make(chan bool)		//0 for ready to go, 1 for busy, 2 for error
 	dataCh := make(chan string, 3)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	go monitor.AutoMonitor(cmdCh, feedbackCh, dataCh)
 
-	<- feedbackCh
+	status = <- feedbackCh
 
 	for {
-
 		var sList []string
 		getInput: for {
-			//TODO: print input Prompt
-			fmt.Printf("Enter command: ")
 
 			scanner.Scan()
 			sList = strings.Fields(scanner.Text())
 			l := len(sList)
 			if l != 0 {
+				status = false
 				break
 			}
 		}
@@ -70,6 +72,7 @@ func main() {
 				case "bench", "good", "bad", "all":
 					datas[i] = s
 				default:
+					status = true
 					log.Println("bad data")
 					goto getInput
 				}
@@ -80,21 +83,21 @@ func main() {
 
 			cmdCh <- "refresh"
 
-			<- feedbackCh
+			status = <- feedbackCh
 
 		case "fetch" :
 			cmdCh <- "fetch"
 
-			<- feedbackCh
+			status = <- feedbackCh
 		case "pause" :
 			cmdCh <- "pause"
-			<- feedbackCh
+			status = <- feedbackCh
 		case "print" :
 			cmdCh <- "print"
 		case "quit" :
 			cmdCh <- "quit"
 
-			<- feedbackCh
+			status = <- feedbackCh
 
 			os.RemoveAll(tools.TempPath)
 			os.MkdirAll(tools.TempPath, 0755)
@@ -103,25 +106,20 @@ func main() {
 			return
 		case "auto" :
 			cmdCh <- "auto"
-			<- feedbackCh
-		case "manual" :
-			cmdCh <- "manual"
-		case "help" :
-		case "clear", "clr" :
-//			for i, s := range sList[1:] {
-//				switch s {
-//				case "log" :
-//				default:
-//					log.Println("bad data")
-//					goto getInput
-//				}
+			status = <- feedbackCh
+//		case "manual" :
+//			cmdCh <- "manual"
+//		case "help" :
+//		case "clear", "clr" :
+//			for i:=0; i<LogLineNum; i++ {
+//				log.Printf("\n")
 //			}
-
-			cmd := exec.Command("clear")
-			cmd.Stdout = os.Stdout
-			cmd.Run()
-			goto getInput
+//
+//			status = true
+//
+//			goto getInput
 		default:
+			status = true
 			log.Println("bad cmd")
 			goto getInput
 		}
@@ -156,34 +154,60 @@ func generateSpeedOutFile(nodes []*tools.Node) {
 
 }
 
-func startLogSystem() (*os.File, *exec.Cmd) {
+func startLogSystem() *os.File {
 	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.SetOutput(f)
+	r, w := io.Pipe()
+        multi := io.MultiWriter(f, w)
+        log.SetOutput(multi)
 
-	dir, _ := os.Getwd()
-	fullPath := fmt.Sprintf("%s/%s", dir, tools.LogPath)
+        go func() {
+		var content string
+                var logC string
+                logC = "(log system)"
+		head := "\nLog:\n\n"
+		prompt := "\nEnter command: "
+		wait := "\nPlease wait..."
 
-	cmd := exec.Command("gnome-terminal", "--", "tools/tail.sh", fullPath)
-	err = cmd.Start()
-	if err != nil {
-		f.Close()
-		log.Fatal(err)
-	}
 
-	return f, cmd
+                scanner := bufio.NewScanner(r)
+                for scanner.Scan() {
+			s := scanner.Text()
+                        logUpdate(&logC, s)
+                        if status == true {
+				content = head + logC + "\n" + prompt
+			}else{
+				content = head + logC + "\n" + wait
+			}
+
+                        cmd := exec.Command("clear")
+                        cmd.Stdout = os.Stdout
+                        cmd.Run()
+
+                        fmt.Printf("%s", content)
+                }
+                if err := scanner.Err(); err != nil {
+                        fmt.Fprintln(os.Stderr, "reading standard input:", err)
+                }
+        }()
+
+	return f
 }
 
-func stopCmd(cmd *exec.Cmd) {
-	err := cmd.Process.Signal(syscall.SIGTERM)
+func logUpdate(logC *string, newThings string) {
+        lines := strings.Split(*logC, "\n")
+        curLine := len(lines)
 
-	_, err = cmd.Process.Wait()
-	if err != nil {
-		log.Fatal(err)
-	}
+        if curLine >= LogLineNum {
+                lines = append(lines, newThings)
+                lines = lines[1:]
+        }else{
+                lines = append(lines, newThings)
+        }
 
-	log.Println("LogSystem quit", "\n")
-}
+        *logC = strings.Join(lines, "\n")
+}             
+

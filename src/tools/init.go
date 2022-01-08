@@ -3,7 +3,6 @@ package tools
 import (
 	"runtime"
 	"time"
-	"log"
 	"os"
 )
 
@@ -66,7 +65,7 @@ func PreCheck(preProxyPort int, protocols []string) {
 
 func isLinux() bool{
 	os := runtime.GOOS
-	log.Println("Platform:", os)
+//	log.Println("Platform:", os)
 	if os == "linux" {
 		return true
 	}else{
