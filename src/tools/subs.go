@@ -1,9 +1,11 @@
 package tools
 import (
 	"net/url"
+	"sort"
 	"net/http"
 	"io/ioutil"
 	"io"
+	"errors"
 	"os"
 	"encoding/json"
 	"encoding/base64"
@@ -68,15 +70,17 @@ func GetAllNodes(nodeLs *NodeLists) {
 	var nodeLs2 NodeLists
 	GetNodeLsFromFormatedFile(&nodeLs2, BadOutPath)
 	for _, node := range nodeLs2.Vms {
-		if node.Timeout < 10 {
+		if node.Timeout < MaxTimeoutCnt {
 			nodeLs.Vms = append(nodeLs.Vms, node)
 		}
 	}
+	sort.Stable(ByTimeout(nodeLs.Vms))
 	for _, node := range nodeLs2.Sses {
-		if node.Timeout < 10 {
+		if node.Timeout < MaxTimeoutCnt {
 			nodeLs.Sses = append(nodeLs.Sses, node)
 		}
 	}
+	sort.Stable(ByTimeout(nodeLs.Sses))
 
 	var subs []string
 	var subLs Links
@@ -199,7 +203,11 @@ func GetNodeLsFromFile(nodeLs *NodeLists, filePath string) {
 
 func GetNodeLsFromFormatedFile(nodeLs *NodeLists, filePath string ) {
 	var nodes []*Node
-	nodes, _ = GetNodesFromFormatedFile(filePath)
+	nodes, err := GetNodesFromFormatedFile(filePath)
+	if err != nil {
+		return
+	}
+
 	DispatchNodes(nodeLs, nodes)
 }
 
@@ -326,10 +334,14 @@ func GetNodesFromFormatedFile(filePath string) ([]*Node, error) {
 	for _, str := range strs {
 		var node Node
 		s := strings.Split(str, ",")
+		if len(s) != 4 {
+			return nil, errors.New("string format error")
+		}
 		i, _ := strconv.Atoi(s[0])
 		t, _ := strconv.Atoi(s[1])
 		node.AvgDelay = i 
 		node.Timeout = t
+		//node.Country = s[2]
 		node.Type = s[2]
 		node.ShareLink = s[3]
 		nodes = append(nodes, &node)

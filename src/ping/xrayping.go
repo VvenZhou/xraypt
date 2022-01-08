@@ -104,7 +104,7 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 			continue
 		}
 
-		var cookie []*http.Cookie
+//		var cookie []*http.Cookie
 		var fail int = 0
 
 		for i := 0; i < tools.PCnt; i++ {
@@ -114,8 +114,8 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 					//log.Println("ping error: code:", code, err)
 				}
 				fail += 1
+				time.Sleep(time.Millisecond * 50)
 			}
-			time.Sleep(time.Millisecond * 200)
 		}
 
 		if fail <= tools.PingAllowFail {
@@ -124,15 +124,15 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int) {
 
 			for i := 0; i < tools.PRealCnt; i++{
 				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
-				delay, _, coo, err := doPing(pRealClient, "https://duckduckgo.com", cookie, true)
+				delay, _, _, err := doPing(pRealClient, "https://duckduckgo.com", nil, true)
 				if err != nil {
+					time.Sleep(time.Millisecond * 50)
 				}else{
-					if len(coo) != 0 {
-						cookie = coo
-					}
+//					if len(coo) != 0 {
+//						cookie = coo
+//					}
 					pRealDelayList = append(pRealDelayList, delay)
 				}
-				time.Sleep(time.Millisecond * 200)
 			}
 			if len(pRealDelayList) >= tools.PRealLeastNeeded {
 				pRealAvgDelay = getAvg(pRealDelayList)
@@ -168,17 +168,18 @@ func doPing(myClient http.Client, url string, cookies []*http.Cookie, pReal bool
 		err = fmt.Errorf("http.NewRequest:", err)
 		return 0, 0, nil, err
 	}
-	if pReal {
-		for i := range cookies {
-			req.AddCookie(cookies[i])
-		}
+//	if pReal {
+//		for i := range cookies {
+//			req.AddCookie(cookies[i])
+//		}
 		req.Close = true
-		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36")
-	}
+//		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36")
+//	}
 
 	start := time.Now()
 	resp, err := myClient.Do(req) //send request
 	stop := time.Now()
+
 	if err != nil {
 		return 0, 0, nil, err
 	}

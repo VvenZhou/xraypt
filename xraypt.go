@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -28,11 +29,18 @@ var LogLineNum = 40
 
 func main() {
 
-	tools.PreCheck(tools.MainPort, protocols)
+	flag.IntVar(&tools.MainPort, "mp", 8123, "main proxy out port num")
+	flag.IntVar(&tools.PreProxyPort, "pp", 8123, "pre proxy in port num")
+	flag.IntVar(&tools.RoutinePeriod, "rp", 300, "auto mode refresh routine period (unit: second)")
+
+	flag.Parse()
+
+	tools.PreCheck(protocols)
 
 	logf := startLogSystem()
 	defer logf.Close()
 	defer fmt.Printf("\n")
+	defer log.Printf("\n\n\n")
 
 
 	os.RemoveAll(tools.TempPath)
@@ -47,6 +55,7 @@ func main() {
 	go monitor.AutoMonitor(cmdCh, feedbackCh, dataCh)
 
 	status = <- feedbackCh
+	log.Println()
 
 	for {
 		var sList []string
@@ -82,20 +91,24 @@ func main() {
 			cmdCh <- "refresh"
 
 			status = <- feedbackCh
+			log.Println()
 
 		case "fetch" :
 			cmdCh <- "fetch"
 
 			status = <- feedbackCh
+			log.Println()
 		case "pause" :
 			cmdCh <- "pause"
 			status = <- feedbackCh
+			log.Println()
 		case "print" :
 			cmdCh <- "print"
 		case "quit" :
 			cmdCh <- "quit"
 
 			status = <- feedbackCh
+			log.Println()
 
 			os.RemoveAll(tools.TempPath)
 			os.MkdirAll(tools.TempPath, 0755)
@@ -105,6 +118,7 @@ func main() {
 		case "auto" :
 			cmdCh <- "auto"
 			status = <- feedbackCh
+			log.Println()
 //		case "manual" :
 //			cmdCh <- "manual"
 //		case "help" :

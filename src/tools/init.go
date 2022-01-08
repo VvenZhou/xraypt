@@ -7,7 +7,8 @@ import (
 )
 
 var PreProxyPort int
-const MainPort = 8123
+var MainPort int
+var RoutinePeriod int		// seconds
 
 var XrayPath string
 var SubsFilePath string
@@ -31,12 +32,14 @@ var Mode int
 
 var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
-var PThreadNum = 150
+var PThreadNum = 80
 const SThreadNum = 10
 const DSLine = 2.0
 
 const PCnt = 3
 const PingAllowFail = 2
+
+const MaxTimeoutCnt = 25
 
 const PRealCnt = 5
 const PRealLeastNeeded = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
@@ -48,7 +51,6 @@ const pT = 2000 //ms
 const pRealT = 1500 //ms
 const sT = 15000 //ms
 
-var RoutinePeriod = 300		// seconds
 
 var RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
 
@@ -57,9 +59,9 @@ const PRealTimeout = time.Duration(pRealT * 2) * time.Millisecond
 const STimeout = time.Duration(sT) * time.Millisecond
 const SubTimeout = time.Duration(subT) * time.Millisecond
 
-func PreCheck(preProxyPort int, protocols []string) {
+func PreCheck(protocols []string) {
 	FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan = checkProtocols(protocols)
-	gVarInit(preProxyPort)
+	gVarInit()
 	dirInit()
 }
 
@@ -72,8 +74,7 @@ func isLinux() bool{
 	}
 }
 
-func gVarInit(port int){
-	PreProxyPort = port
+func gVarInit(){
 	if isLinux() {
 		XrayPath = "tools/xray"
 

@@ -45,6 +45,13 @@ func (a ByDelay) Len() int           { return len(a) }
 func (a ByDelay) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDelay) Less(i, j int) bool { return a[i].AvgDelay < a[j].AvgDelay }
 
+type ByTimeout []*Node
+
+func (a ByTimeout) Len() int           { return len(a) }
+func (a ByTimeout) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTimeout) Less(i, j int) bool { return a[i].Timeout > a[j].Timeout }
+
+
 func (n *Node) Init(ntype, shareLink string) {
 	//n.Id = id
 	n.Type = ntype
