@@ -131,16 +131,13 @@ func (n *Node) createConfig() error {
 			var ssout Outbound
 			err := SSLinkToSSout(&ssout, n.ShareLink)
 			if err != nil {
-				//log.Println("SSLinkToSSout:", err)
 				err = fmt.Errorf("SSLinkToSSout:", err)
 				return err
 			}
 			OutboundToTestConfig(&con, ssout)
 			n.Con = &con
-			//log.Println(con)
 
 		default :
-			//log.Println("ERROR: unknown node type")
 			return errors.New("unknown node type")
 	}
 

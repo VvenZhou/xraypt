@@ -159,9 +159,6 @@ func getLinks(subLs *Links, subs []string) {
 		}else{
 			for _, vm := range yousVms {
 				l := strings.Split(vm, "vmess://")
-//				log.Println(vm)
-//				log.Println(len(l))
-//				log.Println(l)
 				subLs.Vms = append(subLs.Vms, l[1])
 			}
 		}
@@ -186,28 +183,6 @@ func getLinks(subLs *Links, subs []string) {
 			}
 		}
 	}
-
-//	// Links from GoodOut.txt
-//	strLinks, err = getLinksFromFile(GoodOutPath)
-//	if err != nil {
-//		log.Println("[ERROR]: getVmFrom speedOut.txt:", err)
-//	}else{
-//		if len(strLinks) != 0 {
-//			links = append(links, strLinks...)
-//			log.Println("speedOut.txt got!")
-//		}
-//	}
-//	// Links from BadOut.txt
-//	strLinks, err = getLinksFromFile(BadOutPath)
-//	if err != nil {
-//		log.Println("[ERROR]: getVmFrom pingOut.txt:", err)
-//	}else{
-//		if len(strLinks) != 0 {
-//			links = append(links, strLinks...)
-//			log.Println("pingOut.txt got!")
-//		}
-//	}
-
 
 	//Dispatch links
 	DispatchLinks(subLs, links)

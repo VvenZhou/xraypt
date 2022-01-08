@@ -65,7 +65,6 @@ func PreCheck(preProxyPort int, protocols []string) {
 
 func isLinux() bool{
 	os := runtime.GOOS
-//	log.Println("Platform:", os)
 	if os == "linux" {
 		return true
 	}else{
@@ -117,18 +116,8 @@ func gVarInit(port int){
 
 func dirInit(){
 	if _, err := os.Stat(TempPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		os.MkdirAll(TempPath, 0755)
 	}
-//	if _, err := os.Stat(BackupPath); os.IsNotExist(err) {
-//		os.MkdirAll(BackupPath, 0755)
-//	}
-//	if _, err := os.Stat(JsonsPath); os.IsNotExist(err) {
-//		os.MkdirAll(JsonsPath, 0755)
-//	}
-//	if _, err := os.Stat(HalfJsonsPath); os.IsNotExist(err) {
-//		os.MkdirAll(HalfJsonsPath, 0755)
-//	}
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		os.MkdirAll(ConfigPath, 0755)
 	}

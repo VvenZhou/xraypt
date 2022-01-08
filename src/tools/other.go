@@ -27,7 +27,6 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 	for _, in := range con.Inbounds {
 		inMap := in.(map[string]interface{})
 		if inMap["protocol"] == "http" {
-			//con.Inbounds[i]["port"] = port
 			inMap["port"] = port
 		}
 	}
@@ -42,7 +41,6 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 		return err
 	}
 
-	//fmt.Printf("%v\n", con)
 	return nil
 }
 

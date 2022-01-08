@@ -201,6 +201,8 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 					}()
 					log.Println("Auto mode Started")
 					preStatus = 1
+				}else{
+					log.Println("Already in Auto mode")
 				}
 
 				mu.Unlock()
@@ -426,24 +428,24 @@ func xrayDaemonStartStop(cmd string) {
 }
 
 //not used yet
-func nodesToBenches (nodes []*tools.Node) []*Bench {
-
-	var benches []*Bench
-	var bench *Bench
-
-	for i, node := range nodes {
-		if i%benchSize == 0 {
-			bench = new(Bench)
-			(*bench).GoodNodes = append((*bench).GoodNodes, node)
-			benches = append(benches, bench)
-		}
-		if i%benchSize > 0 {
-			(*bench).GoodNodes = append((*bench).GoodNodes, node)
-		}
-	}
-
-	return benches
-}
+//func nodesToBenches (nodes []*tools.Node) []*Bench {
+//
+//	var benches []*Bench
+//	var bench *Bench
+//
+//	for i, node := range nodes {
+//		if i%benchSize == 0 {
+//			bench = new(Bench)
+//			(*bench).GoodNodes = append((*bench).GoodNodes, node)
+//			benches = append(benches, bench)
+//		}
+//		if i%benchSize > 0 {
+//			(*bench).GoodNodes = append((*bench).GoodNodes, node)
+//		}
+//	}
+//
+//	return benches
+//}
 
 func updateOneBenchFromStackR(bench *Bench, stack *[]*tools.Node) error{
 	//for len(*stack) > 0 {

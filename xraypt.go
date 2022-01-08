@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"os"
 	"io"
@@ -34,7 +33,6 @@ func main() {
 	logf := startLogSystem()
 	defer logf.Close()
 	defer fmt.Printf("\n")
-//	defer stopCmd(logCmd)
 
 
 	os.RemoveAll(tools.TempPath)
@@ -126,34 +124,6 @@ func main() {
 	}
 }
 
-//Not used
-func generateSpeedOutFile(nodes []*tools.Node) {
-	var goodVmLinks []string
-	for i, n := range nodes {
-		fmt.Println(i, n.Type, (*n).AvgDelay, (*n).Country, " ", (*n).DLSpeed, " ", (*n).ULSpeed)
-		//(*n).Id = strconv.Itoa(i)
-		n.CreateFinalJson(tools.JsonsPath, strconv.Itoa(i))
-		str := []string{strconv.Itoa(i), "\n", n.Type, "://", (*n).ShareLink,
-				"\nDelay:", strconv.Itoa((*n).AvgDelay),
-				" Down: ", fmt.Sprintf("%.2f", (*n).DLSpeed),
-				" Up: ", fmt.Sprintf("%.2f", (*n).ULSpeed),
-				" Country: ", (*n).Country, "\n"}
-		vmOutStr := strings.Join(str, "")
-		goodVmLinks = append(goodVmLinks, vmOutStr)
-	}
-
-	if len(goodVmLinks) != 0 {
-		bytes := []byte(strings.Join(goodVmLinks[:], "\n"))
-		err := os.WriteFile(tools.SpeedOutPath, bytes, 0644)
-		if err != nil {
-			log.Println(err)
-		}else{
-			log.Println("vmOut generated!")
-		}
-	}
-
-}
-
 func startLogSystem() *os.File {
 	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 	if err != nil {
@@ -168,7 +138,7 @@ func startLogSystem() *os.File {
 		var content string
                 var logC string
                 logC = "(log system)"
-		head := "\nLog:\n\n"
+		head := "\nLogs:\n\n"
 		prompt := "\nEnter command: "
 		wait := "\nPlease wait..."
 

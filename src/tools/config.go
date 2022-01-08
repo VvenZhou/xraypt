@@ -23,13 +23,6 @@ type Config struct{
 
 type Outbound struct {
 	Protocol string `json:"protocol"`
-	//Settings struct {
-	//	Vnext []struct {
-	//		Address string `json:"address"`
-	//		Port int `json:"port"`
-	//		Users []interface{} `json:"users"`
-	//	} `json:"vnext"`
-	//} `json:"settings"`
 	Settings interface{} `json:"settings"`
 	Tag string `json:"tag"`
 	StreamSettings struct {
@@ -121,6 +114,5 @@ func OutboundToTestConfig(con *Config, out Outbound ) {
 	(*con).Dns.Servers = []interface{}{ "8.8.8.8", "1.1.1.1" }
 
 	(*con).Routing.DomainStrategy = "AsIs"
-	//(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{{Type: "field", Domain: []string{"geosite:google", "domain:speedtest.com"}, OutboundTag: "proxy"}}
 	(*con).Routing.Rules = []struct{Type string `json:"type"`; Domain []string `json:"domain"`; OutboundTag string `json:"outboundTag"`}{}
 }
