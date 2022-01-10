@@ -69,6 +69,8 @@ var daemonStatus int		//0 for stopped, 1 for started
 func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
 	var ticker *time.Ticker
+	ticker = time.NewTicker(tools.RoutinePeriodDu)
+	ticker.Stop()
 
 	cmdToRoutineCh := make(chan bool)
 	feedbackFromRoutineCh := make(chan bool)
@@ -183,7 +185,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 						//TODO: Stop Manual
 					}
 
-					ticker = time.NewTicker(tools.RoutinePeriodDu)
+					ticker.Reset(tools.RoutinePeriodDu)
 					go func() {
 						for {
 							select {

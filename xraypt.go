@@ -40,7 +40,7 @@ func main() {
 	logf := startLogSystem()
 	defer logf.Close()
 	defer fmt.Printf("\n")
-	defer log.Printf("\n\n\n")
+	defer log.Printf("Xraypt quit\n\n")
 
 
 	os.RemoveAll(tools.TempPath)
@@ -108,7 +108,6 @@ func main() {
 			cmdCh <- "quit"
 
 			status = <- feedbackCh
-			log.Println()
 
 			os.RemoveAll(tools.TempPath)
 			os.MkdirAll(tools.TempPath, 0755)

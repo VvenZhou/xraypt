@@ -51,16 +51,22 @@ const pT = 2000 //ms
 const pRealT = 1500 //ms
 const sT = 15000 //ms
 
+var RoutinePeriodDu time.Duration
 
-var RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
-
-const PTimeout = time.Duration(pT * 2) * time.Millisecond
-const PRealTimeout = time.Duration(pRealT * 2) * time.Millisecond
-const STimeout = time.Duration(sT) * time.Millisecond
-const SubTimeout = time.Duration(subT) * time.Millisecond
+var PTimeout time.Duration
+var PRealTimeout time.Duration
+var STimeout time.Duration
+var SubTimeout time.Duration
 
 func PreCheck(protocols []string) {
 	FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan = checkProtocols(protocols)
+
+	RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
+	PTimeout = time.Duration(pT * 2) * time.Millisecond
+	PRealTimeout = time.Duration(pRealT * 2) * time.Millisecond
+	STimeout = time.Duration(sT) * time.Millisecond
+	SubTimeout = time.Duration(subT) * time.Millisecond
+
 	gVarInit()
 	dirInit()
 }
