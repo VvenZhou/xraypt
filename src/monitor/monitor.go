@@ -58,6 +58,7 @@ var cmdToDaemonCh = make(chan string)
 var feedbackFromDaemonCh = make(chan string)
 
 var CurrentNode *tools.Node
+var CurrentNodePos int
 var FirstBench *Bench
 
 var BadNodesBuffer []*tools.Node
@@ -151,6 +152,26 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 
 				mu.Unlock()
 				feedbackCh <- true
+			case "next" :
+				mu.Lock()
+				log.Println("Cmd: Next")
+
+				if CurrentNodePos < len(FirstBench.GoodNodes) - 1 {
+					xrayDaemonStartStop("stop")
+					CurrentNodePos += 1
+					log.Println("Next Position:", CurrentNodePos)
+					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+					xrayDaemonStartStop("start")
+				}else{
+					xrayDaemonStartStop("stop")
+					CurrentNodePos = 0
+					log.Println("Next Position:", CurrentNodePos)
+					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+					xrayDaemonStartStop("start")
+				}
+
+				mu.Unlock()
+				feedbackCh <- true
 			case "print" :
 				log.Println("Cmd: Print")
 				//stopCurrentAction()
@@ -163,6 +184,13 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				}
 
 				xrayDaemonStartStop("stop")
+
+				var nodeStack []*tools.Node
+				nodeStack, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+				nodeStackPop(&nodeStack, FirstBench.PreLength)	//remove old firstBench nodes
+
+				nodeStack = append(FirstBench.GoodNodes, nodeStack...)
+				tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
 
 				if curStatus == 1 {
 					cmdToRoutineCh <- true 
@@ -250,7 +278,8 @@ func firstIn() {
 		return
 	}
 
-	CurrentNode = bench.GoodNodes[0]
+	CurrentNodePos = 0
+	CurrentNode = bench.GoodNodes[CurrentNodePos]
 	FirstBench = &bench
 
 	(*FirstBench).Clean()
@@ -271,7 +300,10 @@ func fetchNew() {
 
 	sort.Stable(tools.ByDelay(goodPingNodes))
 
-	CurrentNode = goodPingNodes[0]
+	CurrentNodePos = 0
+	CurrentNode = goodPingNodes[CurrentNodePos]
+	xrayDaemonStartStop("stop")
+	xrayDaemonStartStop("start")
 	FirstBench.GoodNodes = goodPingNodes[:benchSize]
 
 	(*FirstBench).Clean()
@@ -303,11 +335,12 @@ func routine() error {
 	l := len(FirstBench.GoodNodes)
 
 	if l > benchSize {
-		(*FirstBench).Clean()
 		goodNodes := FirstBench.GoodNodes[benchSize:]
 		nodeStackPush(&nodeStack, goodNodes)
 
 		FirstBench.GoodNodes = FirstBench.GoodNodes[:benchSize]
+
+		(*FirstBench).Clean()
 
 	}else if l >= benchSize/2 && l <= benchSize {
 		(*FirstBench).Clean()
@@ -330,12 +363,15 @@ func routine() error {
 	goodPingNodes, _, _, _, _ := ping.XrayPing([]*tools.Node{CurrentNode})
 	if goodPingNodes == nil {
 		xrayDaemonStartStop("stop")
-		CurrentNode = FirstBench.GoodNodes[0]
+		CurrentNodePos = 0
+		CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
 		xrayDaemonStartStop("start")
 	}else{
 		if CurrentNode.AvgDelay > FirstBench.MidDelay {
+			log.Println("Update CurrentNode")
 			xrayDaemonStartStop("stop")
-			CurrentNode = FirstBench.GoodNodes[0]
+			CurrentNodePos = 0
+			CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
 			xrayDaemonStartStop("start")
 		}
 	}

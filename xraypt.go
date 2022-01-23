@@ -57,6 +57,8 @@ func main() {
 	status = <- feedbackCh
 	log.Println()
 
+//	var cmdQueue []string
+
 	for {
 		var sList []string
 		getInput: for {
@@ -100,6 +102,10 @@ func main() {
 			log.Println()
 		case "pause" :
 			cmdCh <- "pause"
+			status = <- feedbackCh
+			log.Println()
+		case "next" :
+			cmdCh <- "next"
 			status = <- feedbackCh
 			log.Println()
 		case "print" :

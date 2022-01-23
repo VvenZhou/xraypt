@@ -39,7 +39,7 @@ const DSLine = 2.0
 const PCnt = 3
 const PingAllowFail = 2
 
-const MaxTimeoutCnt = 25
+const MaxTimeoutCnt = 10
 
 const PRealCnt = 5
 const PRealLeastNeeded = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
@@ -85,39 +85,39 @@ func gVarInit(){
 		XrayPath = "tools/xray"
 
 		TempPath = "temp/"
-		BackupPath = "backup/"
+//		BackupPath = "backup/"
 		ConfigPath = "config/"
 		OutPath = "out/"
 
-		JsonsPath = "out/jsons/"
-		HalfJsonsPath = "out/halfJsons/"
+//		JsonsPath = "out/jsons/"
+//		HalfJsonsPath = "out/halfJsons/"
 
-		PingOutPath = "out/pingOut.txt"
-		SpeedOutPath = "out/speedOut.txt"
+		PingOutPath = OutPath + "pingOut.txt"
+		SpeedOutPath = OutPath + "speedOut.txt"
 
-		GoodOutPath = "out/goodOut.txt"
-		BadOutPath = "out/badOut.txt"
-		ErrorOutPath = "out/errorOut.txt"
+		GoodOutPath = OutPath + "goodOut.txt"
+		BadOutPath = OutPath + "badOut.txt"
+		ErrorOutPath = OutPath + "errorOut.txt"
 
-		LogPath = "out/log.txt"
+		LogPath = OutPath + "log.txt"
 
-		SubsFilePath = "config/subs.txt"
-	}else{
-		XrayPath = "tools\\xray.exe"
-
-		TempPath = "temp\\"
-		BackupPath = "backup\\"
-		ConfigPath = "config\\"
-		OutPath = "out\\"
-
-		JsonsPath = "out\\jsons\\"
-		HalfJsonsPath = "out\\halfJsons\\"
-
-		PingOutPath = "out\\pingOut.txt"
-		SpeedOutPath = "out\\speedOut.txt"
-		ErrorOutPath = "out\\errorOut.txt"
-
-		SubsFilePath = "config\\subs.txt"
+		SubsFilePath = ConfigPath + "subs.txt"
+//	}else{
+//		XrayPath = "tools\\xray.exe"
+//
+//		TempPath = "temp\\"
+//		BackupPath = "backup\\"
+//		ConfigPath = "config\\"
+//		OutPath = "out\\"
+//
+//		JsonsPath = "out\\jsons\\"
+//		HalfJsonsPath = "out\\halfJsons\\"
+//
+//		PingOutPath = "out\\pingOut.txt"
+//		SpeedOutPath = "out\\speedOut.txt"
+//		ErrorOutPath = "out\\errorOut.txt"
+//
+//		SubsFilePath = "config\\subs.txt"
 	}
 }
 
