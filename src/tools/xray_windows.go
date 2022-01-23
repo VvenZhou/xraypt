@@ -1,9 +1,10 @@
-//go:build linux
+//go:build windows
 package tools
 
 import(
 	"os/exec"
-	"syscall"
+	"strconv"
+	"os"
 	"time"
 	"log"
 	"io"
@@ -68,7 +69,6 @@ func (x *Xray) Init(port int, jsonPath string) error {
 
 func (x *Xray) Run() (io.ReadCloser, error) {
 	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
-	x.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}		// Linux specific
 	stdout, err := x.cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -84,12 +84,9 @@ func (x *Xray) Run() (io.ReadCloser, error) {
 }
 
 func (x *Xray) Stop() error {
-	syscall.Kill(-x.cmd.Process.Pid, syscall.SIGTERM)
-
-	_, err := x.cmd.Process.Wait()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+	kill := exec.Command("TASKKILL", "/T", "/F", "/PID", strconv.Itoa(x.cmd.Process.Pid))
+	kill.Stderr = os.Stderr
+	kill.Stdout = nil
+	return kill.Run()
 }
 

@@ -91,12 +91,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 			switch cmd {
 			case "refresh" :
 				mu.Lock()
-
 				log.Println("Cmd: Refresh")
-
-				if curStatus == 1 {
-					ticker.Stop()
-				}
 
 				var data []string
 				for i:=0; i<2; i++{
@@ -104,20 +99,11 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				}
 				refresh(data)
 
-				if curStatus == 1 {
-					ticker.Reset(tools.RoutinePeriodDu)
-				}
-
 				mu.Unlock()
 				feedbackCh <- true
 			case "fetch" :
 				mu.Lock()
-
 				log.Println("Cmd: FetchNew")
-
-				if curStatus == 1 {
-					ticker.Stop()
-				}
 
 				if daemonStatus == 0 {
 					log.Println("XrayDaemon is not running, you can't fetch anything.")
@@ -126,15 +112,10 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 
 				fetchNew()
 
-				if curStatus == 1 {
-					ticker.Reset(tools.RoutinePeriodDu)
-				}
-
 				mu.Unlock()
 				feedbackCh <- true
 			case "pause" :
 				mu.Lock()
-
 				log.Println("Cmd: Pause")
 
 				switch daemonStatus {
@@ -174,14 +155,9 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				feedbackCh <- true
 			case "print" :
 				log.Println("Cmd: Print")
-				//stopCurrentAction()
 			case "quit" :
 				mu.Lock()
 				log.Println("Cmd: Quit")
-
-				if curStatus == 1 {
-					ticker.Stop()
-				}
 
 				xrayDaemonStartStop("stop")
 
@@ -193,6 +169,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
 
 				if curStatus == 1 {
+					ticker.Stop()
 					cmdToRoutineCh <- true 
 					log.Println("Routine quit:", <- feedbackFromRoutineCh)
 				}
@@ -237,28 +214,6 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 
 				mu.Unlock()
 				feedbackCh <- true
-			case "manual" :
-//				log.Println("Cmd: Manual")
-//				curStatus = 2
-//				if preStatus != 2 {
-//					switch preStatus {
-//					case 0 :	// First in
-//						log.Println("First in")
-//						//FirstIn()
-//					case 1 :
-//						ticker.Stop()
-//						cmdToRoutineCh <- true
-//						log.Println("Auto mode Stopped")
-//					}
-//
-//					//TODO: Manual start
-//
-//
-//					log.Println("Manual mode Started")
-//					preStatus = 2
-//				}
-
-
 			}
 		}
 	}
@@ -367,7 +322,7 @@ func routine() error {
 		CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
 		xrayDaemonStartStop("start")
 	}else{
-		if CurrentNode.AvgDelay > FirstBench.MidDelay {
+		if CurrentNode.AvgDelay - FirstBench.MidDelay > 50 {
 			log.Println("Update CurrentNode")
 			xrayDaemonStartStop("stop")
 			CurrentNodePos = 0

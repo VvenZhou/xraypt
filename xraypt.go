@@ -38,9 +38,9 @@ func main() {
 	tools.PreCheck(protocols)
 
 	logf := startLogSystem()
-	defer logf.Close()
 	defer fmt.Printf("\n")
-	defer log.Printf("Xraypt quit\n\n")
+	defer logf.Close()
+	defer log.Printf("Xraypt quit\n")
 
 
 	os.RemoveAll(tools.TempPath)
@@ -54,6 +54,10 @@ func main() {
 
 	go monitor.AutoMonitor(cmdCh, feedbackCh, dataCh)
 
+	status = <- feedbackCh
+	log.Println()
+
+	cmdCh <- "auto"
 	status = <- feedbackCh
 	log.Println()
 
@@ -72,7 +76,7 @@ func main() {
 			}
 		}
 		switch sList[0] {
-		case "refresh" :
+		case "r", "refresh" :
 
 			datas := []string{"bench", ""}
 
@@ -95,22 +99,22 @@ func main() {
 			status = <- feedbackCh
 			log.Println()
 
-		case "fetch" :
+		case "f", "fetch" :
 			cmdCh <- "fetch"
 
 			status = <- feedbackCh
 			log.Println()
-		case "pause" :
+		case "p", "pause" :
 			cmdCh <- "pause"
 			status = <- feedbackCh
 			log.Println()
-		case "next" :
+		case "n", "next" :
 			cmdCh <- "next"
 			status = <- feedbackCh
 			log.Println()
-		case "print" :
-			cmdCh <- "print"
-		case "quit" :
+//		case "print" :
+//			cmdCh <- "print"
+		case "q", "quit" :
 			cmdCh <- "quit"
 
 			status = <- feedbackCh
@@ -124,17 +128,24 @@ func main() {
 			cmdCh <- "auto"
 			status = <- feedbackCh
 			log.Println()
-//		case "manual" :
-//			cmdCh <- "manual"
 //		case "help" :
-//		case "clear", "clr" :
-//			for i:=0; i<LogLineNum; i++ {
-//				log.Printf("\n")
-//			}
-//
-//			status = true
-//
-//			goto getInput
+		case "clear", "clr" :
+
+			switch tools.OSPlatform {
+			case "linux":
+				cmd := exec.Command("clear")
+				cmd.Stdout = os.Stdout
+				cmd.Run()
+			case "windows":
+				cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
+				cmd.Stdout = os.Stdout
+				cmd.Run()
+			}
+
+			status = true
+			log.Println()
+
+			goto getInput
 		default:
 			status = true
 			log.Println("bad cmd")
@@ -154,29 +165,18 @@ func startLogSystem() *os.File {
         log.SetOutput(multi)
 
         go func() {
-		var content string
-                var logC string
-                logC = "(log system)"
-		head := "\nLogs:\n\n"
-		prompt := "\nEnter command: "
-		wait := "\nPlease wait..."
-
+		prompt := "Enter command: "
+		wait := "Please wait..."
 
                 scanner := bufio.NewScanner(r)
                 for scanner.Scan() {
 			s := scanner.Text()
-                        logUpdate(&logC, s)
+			fmt.Printf("\r%s", s)
                         if status == true {
-				content = head + logC + "\n" + prompt
+				fmt.Printf("\n%s", prompt)
 			}else{
-				content = head + logC + "\n" + wait
+				fmt.Printf("\n%s", wait)
 			}
-
-                        cmd := exec.Command("clear")
-                        cmd.Stdout = os.Stdout
-                        cmd.Run()
-
-                        fmt.Printf("%s", content)
                 }
                 if err := scanner.Err(); err != nil {
                         fmt.Fprintln(os.Stderr, "reading standard input:", err)
@@ -185,6 +185,55 @@ func startLogSystem() *os.File {
 
 	return f
 }
+//func startLogSystem() *os.File {
+//	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	r, w := io.Pipe()
+//        multi := io.MultiWriter(f, w)
+//        log.SetOutput(multi)
+//
+//        go func() {
+//		var content string
+//                var logC string
+//                logC = "(log system)"
+//		head := "\nLogs:\n\n"
+//		prompt := "\nEnter command: "
+//		wait := "\nPlease wait..."
+//
+//
+//                scanner := bufio.NewScanner(r)
+//                for scanner.Scan() {
+//			s := scanner.Text()
+//                        logUpdate(&logC, s)
+//                        if status == true {
+//				content = head + logC + "\n" + prompt
+//			}else{
+//				content = head + logC + "\n" + wait
+//			}
+//
+//			switch tools.OSPlatform {
+//			case "linux":
+//				cmd := exec.Command("clear")
+//				cmd.Stdout = os.Stdout
+//				cmd.Run()
+//			case "windows":
+//				cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
+//				cmd.Stdout = os.Stdout
+//				cmd.Run()
+//			}
+//
+//                        fmt.Printf("%s", content)
+//                }
+//                if err := scanner.Err(); err != nil {
+//                        fmt.Fprintln(os.Stderr, "reading standard input:", err)
+//                }
+//        }()
+//
+//	return f
+//}
 
 func logUpdate(logC *string, newThings string) {
         lines := strings.Split(*logC, "\n")

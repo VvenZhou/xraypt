@@ -10,6 +10,8 @@ var PreProxyPort int
 var MainPort int
 var RoutinePeriod int		// seconds
 
+var OSPlatform string
+
 var XrayPath string
 var SubsFilePath string
 var PingOutPath string
@@ -67,21 +69,15 @@ func PreCheck(protocols []string) {
 	STimeout = time.Duration(sT) * time.Millisecond
 	SubTimeout = time.Duration(subT) * time.Millisecond
 
+	OSPlatform = runtime.GOOS
+
 	gVarInit()
 	dirInit()
 }
 
-func isLinux() bool{
-	os := runtime.GOOS
-	if os == "linux" {
-		return true
-	}else{
-		return false
-	}
-}
-
 func gVarInit(){
-	if isLinux() {
+	switch OSPlatform {
+	case "linux":
 		XrayPath = "tools/xray"
 
 		TempPath = "temp/"
@@ -102,22 +98,23 @@ func gVarInit(){
 		LogPath = OutPath + "log.txt"
 
 		SubsFilePath = ConfigPath + "subs.txt"
-//	}else{
-//		XrayPath = "tools\\xray.exe"
-//
-//		TempPath = "temp\\"
-//		BackupPath = "backup\\"
-//		ConfigPath = "config\\"
-//		OutPath = "out\\"
-//
-//		JsonsPath = "out\\jsons\\"
-//		HalfJsonsPath = "out\\halfJsons\\"
-//
-//		PingOutPath = "out\\pingOut.txt"
-//		SpeedOutPath = "out\\speedOut.txt"
-//		ErrorOutPath = "out\\errorOut.txt"
-//
-//		SubsFilePath = "config\\subs.txt"
+	case "windows":
+		XrayPath = "tools\\xray.exe"
+
+		TempPath = "temp\\"
+		ConfigPath = "config\\"
+		OutPath = "out\\"
+
+		PingOutPath = OutPath + "pingOut.txt"
+		SpeedOutPath = OutPath + "speedOut.txt"
+
+		GoodOutPath = OutPath + "goodOut.txt"
+		BadOutPath = OutPath + "badOut.txt"
+		ErrorOutPath = OutPath + "errorOut.txt"
+
+		LogPath = OutPath + "log.txt"
+
+		SubsFilePath = ConfigPath + "subs.txt"
 	}
 }
 
