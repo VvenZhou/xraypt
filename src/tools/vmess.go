@@ -49,10 +49,11 @@ type VmessSettings struct {
 	Vnext []Vnext_ `json:"vnext"`
 }
 
+//func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 	var vmShare VmessShare
 
-	err := vmlinkToVmshare(&vmShare, vmShareLink)
+	err := VmlinkToVmshare(&vmShare, vmShareLink)
 	if err != nil {
 		err = fmt.Errorf("vmlinkToVmshare:", err)
 		return err
@@ -94,7 +95,7 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 	return nil
 }
 
-func vmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
+func VmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
 	var i interface{}
 
 	data, err := base64.StdEncoding.DecodeString(vmLink)
@@ -148,14 +149,14 @@ func VmRemoveDuplicateNodes(nodes *[]*Node) {
 	var flag bool
 
 
-	vmlinkToVmshare(&vmS, (*nodes)[0].ShareLink)
+	VmlinkToVmshare(&vmS, (*nodes)[0].ShareLink)
 	nodesNoDup = append(nodesNoDup, (*nodes)[0])
 	vmShare = append(vmShare, &vmS)
 
 	for _, node := range (*nodes){
 		var vmS2 VmessShare
 		flag = true
-		vmlinkToVmshare(&vmS2, node.ShareLink)
+		VmlinkToVmshare(&vmS2, node.ShareLink)
 		for _, vm := range vmShare {
 			//if vmShareCompare(vm, &vmS2) {
 			if *vm == vmS2 {

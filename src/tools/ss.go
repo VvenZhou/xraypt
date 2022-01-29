@@ -8,11 +8,11 @@ import (
 	"log"
 )
 
-type ssShare struct{
-	method string
-	pwd string
-	addr string
-	port int
+type SsShare struct{
+	Method string
+	Pwd string
+	Addr string
+	Port int
 }
 
 type server_ struct {
@@ -28,18 +28,18 @@ type ssSettings struct {
 }
 
 func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
-	var ssSh ssShare
-	err := ssLinkToShare(&ssSh, ssShareLink)
+	var ssSh SsShare
+	err := SsLinkToShare(&ssSh, ssShareLink)
 	if err != nil {
 		err = fmt.Errorf("ssLinkToShare:", err)
 		return err
 	}
 
 	ser := server_ {
-		Addr: ssSh.addr,
-		Port: ssSh.port,
-		Method: ssSh.method,
-		Pwd: ssSh.pwd,
+		Addr: ssSh.Addr,
+		Port: ssSh.Port,
+		Method: ssSh.Method,
+		Pwd: ssSh.Pwd,
 		Level: 0,
 		}
 	ssSet := ssSettings { Servers: []server_{ ser } }
@@ -55,7 +55,7 @@ func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
 	return nil
 }
 
-func ssLinkToShare(ssShareP *ssShare, ssShareLink string) error{
+func SsLinkToShare(ssShareP *SsShare, ssShareLink string) error{
 	var method, pwd, addr string
 	var port int
 	var err error
@@ -75,10 +75,10 @@ func ssLinkToShare(ssShareP *ssShare, ssShareLink string) error{
 		}
 	}
 
-	ssShareP.method = method
-	ssShareP.pwd = pwd
-	ssShareP.addr = addr
-	ssShareP.port = port
+	ssShareP.Method = method
+	ssShareP.Pwd = pwd
+	ssShareP.Addr = addr
+	ssShareP.Port = port
 
 	return nil
 }
@@ -90,7 +90,7 @@ func linkToShareType0(link string) (string, string, string, int, error) {
 
 	methAndPwd, err := base64.StdEncoding.DecodeString(base64AndAddrPortEmail[0])
 	if err != nil {
-		err = fmt.Errorf("ERROR: vmlinkToVmShare: base64Decode:", err)
+		err = fmt.Errorf("ERROR: linkToVmShare: base64Decode:", err)
 		return "", "", "", 0, err
 	}
 
@@ -112,7 +112,7 @@ func linkToShareType1(link string) (string, string, string, int, error) {
 	base64AndEmail := strings.Split(link, "#")
 	base64DecodedStr, err := base64.StdEncoding.DecodeString(base64AndEmail[0])
 	if err != nil {
-		err = fmt.Errorf("ERROR: vmlinkToVmShare: base64Decode:", err)
+		err = fmt.Errorf("ERROR: linkToVmShare: base64Decode:", err)
 		return "", "", "", 0, err
 	}
 
@@ -133,13 +133,13 @@ func linkToShareType1(link string) (string, string, string, int, error) {
 }
 
 func SsRemoveDuplicateNodes(nodes *[]*Node) {
-	var ssS ssShare
+	var ssS SsShare
 	var nodesNoDup []*Node
-	var ssShareList []*ssShare
+	var ssShareList []*SsShare
 	var flag bool
 
 
-	err := ssLinkToShare(&ssS, (*nodes)[0].ShareLink)
+	err := SsLinkToShare(&ssS, (*nodes)[0].ShareLink)
 	if err != nil {
 		log.Println("ERROR: SsRemoveDup: ssLinkToShare:", err)
 	}
@@ -148,9 +148,9 @@ func SsRemoveDuplicateNodes(nodes *[]*Node) {
 	ssShareList = append(ssShareList, &ssS)
 
 	for _, node := range (*nodes){
-		var ssS2 ssShare
+		var ssS2 SsShare
 		flag = true
-		ssLinkToShare(&ssS2, node.ShareLink)
+		SsLinkToShare(&ssS2, node.ShareLink)
 		for _, ss := range ssShareList {
 			//if ssShareCompare(ss, &ssS2) {
 			if *ss == ssS2 {

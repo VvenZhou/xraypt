@@ -34,23 +34,23 @@ var Mode int
 
 var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
-var PThreadNum = 80
+var PThreadNum = 150
 const SThreadNum = 10
 const DSLine = 2.0
 
-const PCnt = 3
+const PCnt = 5
 const PingAllowFail = 2
 
 const MaxTimeoutCnt = 10
 
-const PRealCnt = 5
+const PRealCnt = 7
 const PRealLeastNeeded = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
 
 const NodeTimeoutTolerance = 3
 
 const subT = 5000
 const pT = 2000 //ms
-const pRealT = 1500 //ms
+const pRealT = 2000 //ms
 const sT = 15000 //ms
 
 var RoutinePeriodDu time.Duration
@@ -64,8 +64,8 @@ func PreCheck(protocols []string) {
 	FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan = checkProtocols(protocols)
 
 	RoutinePeriodDu = time.Duration(RoutinePeriod) * time.Second 
-	PTimeout = time.Duration(pT * 2) * time.Millisecond
-	PRealTimeout = time.Duration(pRealT * 2) * time.Millisecond
+	PTimeout = time.Duration(pT) * time.Millisecond
+	PRealTimeout = time.Duration(pRealT) * time.Millisecond
 	STimeout = time.Duration(sT) * time.Millisecond
 	SubTimeout = time.Duration(subT) * time.Millisecond
 

@@ -61,8 +61,6 @@ func main() {
 	status = <- feedbackCh
 	log.Println()
 
-//	var cmdQueue []string
-
 	for {
 		var sList []string
 		getInput: for {
@@ -161,7 +159,7 @@ func startLogSystem() *os.File {
 	}
 
 	r, w := io.Pipe()
-        multi := io.MultiWriter(f, w)
+	multi := io.MultiWriter(f, w)
         log.SetOutput(multi)
 
         go func() {
@@ -185,67 +183,4 @@ func startLogSystem() *os.File {
 
 	return f
 }
-//func startLogSystem() *os.File {
-//	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	r, w := io.Pipe()
-//        multi := io.MultiWriter(f, w)
-//        log.SetOutput(multi)
-//
-//        go func() {
-//		var content string
-//                var logC string
-//                logC = "(log system)"
-//		head := "\nLogs:\n\n"
-//		prompt := "\nEnter command: "
-//		wait := "\nPlease wait..."
-//
-//
-//                scanner := bufio.NewScanner(r)
-//                for scanner.Scan() {
-//			s := scanner.Text()
-//                        logUpdate(&logC, s)
-//                        if status == true {
-//				content = head + logC + "\n" + prompt
-//			}else{
-//				content = head + logC + "\n" + wait
-//			}
-//
-//			switch tools.OSPlatform {
-//			case "linux":
-//				cmd := exec.Command("clear")
-//				cmd.Stdout = os.Stdout
-//				cmd.Run()
-//			case "windows":
-//				cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
-//				cmd.Stdout = os.Stdout
-//				cmd.Run()
-//			}
-//
-//                        fmt.Printf("%s", content)
-//                }
-//                if err := scanner.Err(); err != nil {
-//                        fmt.Fprintln(os.Stderr, "reading standard input:", err)
-//                }
-//        }()
-//
-//	return f
-//}
-
-func logUpdate(logC *string, newThings string) {
-        lines := strings.Split(*logC, "\n")
-        curLine := len(lines)
-
-        if curLine >= LogLineNum {
-                lines = append(lines, newThings)
-                lines = lines[1:]
-        }else{
-                lines = append(lines, newThings)
-        }
-
-        *logC = strings.Join(lines, "\n")
-}             
 

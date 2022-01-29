@@ -24,6 +24,7 @@ type Node struct {
 	Timeout	int
 	ErrorInfo error
 	Con       *Config
+	ShareCon	interface{}
 }
 
 
@@ -127,6 +128,9 @@ func (n *Node) createConfig() error {
 	switch n.Type{
 		case "vmess": 
 			var vmout Outbound
+			var vmShare VmessShare
+			VmlinkToVmshare(&vmShare, n.ShareLink)
+			n.ShareCon = vmShare
 			err := VmLinkToVmOut(&vmout, n.ShareLink)
 			if err != nil {
 				err = fmt.Errorf("VmLinkToVmOut:", err)
