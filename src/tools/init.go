@@ -34,7 +34,7 @@ var Mode int
 
 var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
-var PThreadNum = 150
+var PThreadNum = 160
 const SThreadNum = 10
 const DSLine = 2.0
 

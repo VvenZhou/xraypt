@@ -65,7 +65,7 @@ var BadNodesBuffer []*tools.Node
 var curStatus int
 var preStatus int
 
-var daemonStatus int		//0 for stopped, 1 for started
+var daemonStatus bool		//0 for stopped, 1 for started
 
 func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
@@ -105,7 +105,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				mu.Lock()
 				log.Println("Cmd: FetchNew")
 
-				if daemonStatus == 0 {
+				if daemonStatus == false {
 					log.Println("XrayDaemon is not running, you can't fetch anything.")
 					break
 				}
@@ -118,17 +118,16 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				mu.Lock()
 				log.Println("Cmd: Pause")
 
-				switch daemonStatus {
-				case 0 :
-					if curStatus == 1 {
-						ticker.Reset(tools.RoutinePeriodDu)
-					}
-					xrayDaemonStartStop("start")
-				case 1 :
+				if daemonStatus {
 					if curStatus == 1 {
 						ticker.Stop()
 					}
 					xrayDaemonStartStop("stop")
+				}else{
+					if curStatus == 1 {
+						ticker.Reset(tools.RoutinePeriodDu)
+					}
+					xrayDaemonStartStop("start")
 				}
 
 				mu.Unlock()
@@ -153,13 +152,16 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 
 				mu.Unlock()
 				feedbackCh <- true
-			case "print" :
-				log.Println("Cmd: Print")
+//			case "print" :
+//				log.Println("Cmd: Print")
 			case "quit" :
 				mu.Lock()
 				log.Println("Cmd: Quit")
 
-				xrayDaemonStartStop("stop")
+				if daemonStatus {
+					xrayDaemonStartStop("stop")
+				}
+
 
 				var nodeStack []*tools.Node
 				nodeStack, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
@@ -412,11 +414,11 @@ func xrayDaemonStartStop(cmd string) {
 	case "start" :
 		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
 		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
-		daemonStatus = 1
+		daemonStatus = true
 	case "stop" :
 		cmdToDaemonCh <- "TERM"
 		log.Println("XrayDaemon quit:", <- feedbackFromDaemonCh)
-		daemonStatus = 0
+		daemonStatus = false
 	}
 }
 

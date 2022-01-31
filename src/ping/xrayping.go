@@ -83,16 +83,14 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 			n.ErrorInfo = err
 			continue
 		}
-//		time.Sleep(time.Millisecond * 50)
+//		time.Sleep(time.Millisecond * 100)
 //		defer server.Close()
 
 		for i := 0; i < tools.PCnt; i++ {
 //			_, code, _, err := doPing(pClient, "https://www.google.com/gen_204", nil, false)
 			_, err := xray.MeasureDelay(server, tools.PTimeout, "https://www.google.com/gen_204")
 			if err != nil {
-//				if code != 0 {
-					//log.Println("ping error: code:", code, err)
-//				}
+//				log.Println(err)
 				fail += 1
 //				time.Sleep(time.Millisecond * 20)
 			}
@@ -109,9 +107,6 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 				if err != nil {
 //					time.Sleep(time.Millisecond * 20)
 				}else{
-//					if len(coo) != 0 {
-//						cookie = coo
-//					}
 					pRealDelayList = append(pRealDelayList, delay)
 				}
 			}
