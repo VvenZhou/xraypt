@@ -67,7 +67,6 @@ type HttpIn struct{
 
 
 func GenFinalConfig(con *Config) {
-
 	type Outbound struct{
 		Protocol string `json:"protocol"`
 		Tag string `json:"tag"`
@@ -103,13 +102,12 @@ func GenFinalConfig(con *Config) {
 }
 
 func OutboundToTestConfig(con *Config, out Outbound ) {
-
 	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: 8123, Protocol: "http"}
-//	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
+	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
 	//var con Config
 	(*con).Log.Loglevel = "error"
-//	(*con).Inbounds = []interface{}{ htIn, soIn }
-	(*con).Inbounds = []interface{}{ htIn }
+	(*con).Inbounds = []interface{}{ htIn, soIn }
+//	(*con).Inbounds = []interface{}{ htIn }
 	(*con).Outbounds = []interface{}{ out }
 	(*con).Dns.Servers = []interface{}{ "8.8.8.8", "1.1.1.1" }
 

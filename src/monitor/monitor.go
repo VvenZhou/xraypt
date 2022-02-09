@@ -91,6 +91,9 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 			switch cmd {
 			case "refresh" :
 				mu.Lock()
+				if curStatus == 1 {
+					ticker.Stop()
+				}
 				log.Println("Cmd: Refresh")
 
 				var data []string
@@ -99,10 +102,16 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				}
 				refresh(data)
 
+				if curStatus == 1 {
+					ticker.Reset(tools.RoutinePeriodDu)
+				}
 				mu.Unlock()
 				feedbackCh <- true
 			case "fetch" :
 				mu.Lock()
+				if curStatus == 1 {
+					ticker.Stop()
+				}
 				log.Println("Cmd: FetchNew")
 
 				if daemonStatus == false {
@@ -112,6 +121,9 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 
 				fetchNew()
 
+				if curStatus == 1 {
+					ticker.Reset(tools.RoutinePeriodDu)
+				}
 				mu.Unlock()
 				feedbackCh <- true
 			case "pause" :
@@ -258,13 +270,29 @@ func fetchNew() {
 	sort.Stable(tools.ByDelay(goodPingNodes))
 
 	CurrentNodePos = 0
-	CurrentNode = goodPingNodes[CurrentNodePos]
-	xrayDaemonStartStop("stop")
-	xrayDaemonStartStop("start")
-	FirstBench.GoodNodes = goodPingNodes[:benchSize]
+	l := len(goodPingNodes)
+	if l >= benchSize {
+		CurrentNode = goodPingNodes[CurrentNodePos]
+		xrayDaemonStartStop("stop")
+		xrayDaemonStartStop("start")
+		FirstBench.GoodNodes = goodPingNodes[:benchSize]
 
-	(*FirstBench).Clean()
-	FirstBench.PreLength = benchSize
+		(*FirstBench).Clean()
+		FirstBench.PreLength = benchSize
+	}else if l > 0 {
+		CurrentNode = goodPingNodes[CurrentNodePos]
+		xrayDaemonStartStop("stop")
+		xrayDaemonStartStop("start")
+		FirstBench.GoodNodes = goodPingNodes
+
+		(*FirstBench).Clean()
+		FirstBench.PreLength = len(goodPingNodes)
+	}else{
+		log.Println("NO valid nodes")
+		return
+	}
+
+
 
 	tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
 	tools.WriteNodesToFormatedFile(tools.BadOutPath, badPingNodes)
@@ -463,6 +491,7 @@ func refresh(options []string) {
 		if op == "bench" {
 			log.Println("Refresh FirstBench")
 			routine()
+			CurrentNodePos = -1
 			log.Println("Refresh FirstBench done")
 		}else if op == "good" {
 			log.Println("Refresh goodOut.txt")

@@ -50,8 +50,6 @@ func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
 	ss.StreamSettings.TcpSettings.Header.Type = "none"
 	ss.Mx.Enabled = false
 
-	//log.Println(ss)
-
 	return nil
 }
 

@@ -25,21 +25,24 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 		threadNum = tools.PThreadNum
 	}
 
+	for i := 1; i <= threadNum; i++ {
+		go myPing(pingJob, pingResult)
+//		time.Sleep(time.Millisecond * 20)
+	}
+
+
 	//Put nodesIn into pingJob
 	for _, n := range nodesIn {
 		pingJob <- n
 	}
 
-	for i := 1; i <= threadNum; i++ {
-		go myPing(pingJob, pingResult)
-	}
 	close(pingJob)
 
 
-	log.Println("waiting for goroutine")
-	start := time.Now()
-
 	log.Println("length of all", allLen)
+	log.Println("waiting for goroutine")
+
+	start := time.Now()
 	var goodPingNodes, badPingNodes, errorNodes []*tools.Node
 	for i:=0; i< allLen; i++ {
 		n := <- pingResult
@@ -56,16 +59,20 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 		}
 	}
 	stop := time.Now()
+
 	elapsed := stop.Sub(start)
 	timeOfPing := elapsed.Seconds()
 	log.Println("goroutine finished")
+	log.Println("length of good", len(goodPingNodes))
 	
 	return goodPingNodes, badPingNodes, errorNodes, timeOfPing, nil 
 }
 
 func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 	for n := range jobs {
+		var good int = 0
 		var fail int = 0
+		var stat bool = false
 
 		server, err := xray.StartXray(n.Type, n.ShareLink, false, true)
 		if err != nil {
@@ -86,31 +93,49 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 //		time.Sleep(time.Millisecond * 100)
 //		defer server.Close()
 
-		for i := 0; i < tools.PCnt; i++ {
-//			_, code, _, err := doPing(pClient, "https://www.google.com/gen_204", nil, false)
-			_, err := xray.MeasureDelay(server, tools.PTimeout, "https://www.google.com/gen_204")
-			if err != nil {
-//				log.Println(err)
+//		for i := 0; i < tools.PCnt; i++ {
+////			_, code, _, err := doPing(pClient, "https://www.google.com/gen_204", nil, false)
+//			_, err := xray.MeasureDelay(server, tools.PTimeout, "https://www.google.com/gen_204")
+//			if err == nil {
+//				good += 1
+//				if good >= tools.PingLeastGood {
+//					stat = true
+//					break
+//				}
+//			}
+//			time.Sleep(time.Millisecond * 50)
+//		}
+		for {
+			_, err := xray.MeasureDelay(server, time.Millisecond * 5000, "https://duckduckgo.com")
+			if err == nil {
+				good += 1
+				if good >= tools.PingLeastGood {
+					stat = true
+					break
+				}
+			}else{
 				fail += 1
-//				time.Sleep(time.Millisecond * 20)
+				if fail >= tools.PingLeastGood + 2 {
+					break
+				}
 			}
+//			time.Sleep(time.Millisecond * 20)
 		}
 
-		if fail <= tools.PingAllowFail {
+		if stat {
 			var pRealAvgDelay int
 			var pRealDelayList []int
 
 			for i := 0; i < tools.PRealCnt; i++{
-				//delay, code, coo, err := Ping(pRealClient, "https://www.google.com/ncr", cookie, true)
 //				delay, _, _, err := doPing(pRealClient, "https://duckduckgo.com", nil, true)
 				delay, err := xray.MeasureDelay(server, tools.PRealTimeout, "https://duckduckgo.com")
-				if err != nil {
-//					time.Sleep(time.Millisecond * 20)
-				}else{
+				if err == nil {
+//					log.Println("delay:", delay)
 					pRealDelayList = append(pRealDelayList, delay)
 				}
+//				time.Sleep(time.Millisecond * 20)
 			}
-			if len(pRealDelayList) >= tools.PRealLeastNeeded {
+			if len(pRealDelayList) >= tools.PRealLeastGood {
 				pRealAvgDelay = getAvg(pRealDelayList)
 				n.AvgDelay = pRealAvgDelay
 				log.Println("ping got one!", n.Type, "delay:", pRealAvgDelay)

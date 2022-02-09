@@ -70,10 +70,6 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 
 	vmess.Protocol = "vmess"
 	vmess.Settings = vmSettings
-	//(*vmess).Settings.Vnext = []struct{Address string `json:"address"`; Port int `json:"port"`; Users []interface{} `json:"users"`}{{
-	//	Address: vmShare.Add,
-	//	Port: port,
-	//	Users: []interface{}{ user}}}
 	vmess.Tag = "proxy"
 	vmess.StreamSettings.TcpSettings.Header.Type = "none"
 	if vmShare.Net == "tcp" {

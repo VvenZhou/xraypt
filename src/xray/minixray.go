@@ -79,7 +79,7 @@ func StartXray(lType string, shareLink string, useMux, allowInsecure bool) (*cor
 		if err != nil {
 			return nil, err
 		}
-		ob, err = ss2Outbound(&ssShare, false, true)
+		ob, err = ss2Outbound(&ssShare, useMux, allowInsecure)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +89,8 @@ func StartXray(lType string, shareLink string, useMux, allowInsecure bool) (*cor
 	config := &core.Config{
 		App: []*serial.TypedMessage{
 			serial.ToTypedMessage(&applog.Config{
-				ErrorLogType:  applog.LogType_Console,
+				ErrorLogType:  applog.LogType_File,
+				ErrorLogPath:  os.DevNull,
 				ErrorLogLevel: loglevel,
 			}),
 			serial.ToTypedMessage(&dispatcher.Config{}),
@@ -98,12 +99,12 @@ func StartXray(lType string, shareLink string, useMux, allowInsecure bool) (*cor
 		},
 	}
 
-	fileWriterCreater, err := commlog.CreateFileLogWriter(os.DevNull)
-	if err != nil {
-		panic(err)
-	}
+//	fileWriterCreater, err := commlog.CreateFileLogWriter(os.DevNull)
+//	if err != nil {
+//		panic(err)
+//	}
 
-	commlog.RegisterHandler(commlog.NewLogger(fileWriterCreater))
+//	commlog.RegisterHandler(commlog.NewLogger(fileWriterCreater))
 	config.Outbound = []*core.OutboundHandlerConfig{ob}
 	server, err := core.New(config)
 	if err != nil {
@@ -248,7 +249,7 @@ func CoreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, e
 	}
 
 	tr := &http.Transport{
-		DisableKeepAlives: true,
+		DisableKeepAlives: false,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dest, err := v2net.ParseDestination(fmt.Sprintf("%s:%s", network, addr))
 			if err != nil {

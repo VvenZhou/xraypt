@@ -34,17 +34,17 @@ var Mode int
 
 var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
-var PThreadNum = 160
+const MaxTimeoutCnt = 24
+
+var PThreadNum int
 const SThreadNum = 10
 const DSLine = 2.0
 
 const PCnt = 5
-const PingAllowFail = 2
+const PingLeastGood = 2
 
-const MaxTimeoutCnt = 10
-
-const PRealCnt = 7
-const PRealLeastNeeded = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
+const PRealCnt = 5
+const PRealLeastGood = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
 
 const NodeTimeoutTolerance = 3
 

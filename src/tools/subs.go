@@ -447,7 +447,6 @@ func getVmFromYou() ([]string, error) {
 		"type": {"captcha"},
 		"protection": {""},
 	}
-	//fmt.Println(data.Encode())
 	req, err = http.NewRequest(http.MethodPost, "https://www.youneed.win/wp-admin/admin-ajax.php", strings.NewReader(data.Encode()))
 	if err != nil {
 		//log.Println(err)
@@ -480,69 +479,73 @@ func getVmFromYou() ([]string, error) {
 
 func getAllFromFreefq() ([]string, error) {
 	//Get content from website
+	var links []string
+
 	log.Println("Freefq fetching start...")
 	var cookie []*http.Cookie
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
-	subLink := "https://www.freefq.com/v2ray/"
-	req := HttpNewRequest(subLink)
+	subLinks := []string{"https://www.freefq.com/v2ray/", "https://www.freefq.com/free-ss/"}
+	for _, subLink := range(subLinks) {
+		req := HttpNewRequest(subLink)
 
-	resp, err := myClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+		resp, err := myClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-	coo := resp.Cookies()
-	if len(coo) > 0 {
-		cookie = coo
-	}
-	contents, _ := ioutil.ReadAll(resp.Body)
+		coo := resp.Cookies()
+		if len(coo) > 0 {
+			cookie = coo
+		}
+		contents, _ := ioutil.ReadAll(resp.Body)
 
-	doc, err := htmlquery.Parse(strings.NewReader(string(contents)))
-	if err != nil {
-		return nil, err
-	}
-	a := htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/ul[1]/li[1]/a")
-	h2Tail := htmlquery.SelectAttr(a, "href")
-	log.Printf("%s\n", h2Tail)
+		doc, err := htmlquery.Parse(strings.NewReader(string(contents)))
+		if err != nil {
+			return nil, err
+		}
+		a := htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/ul[1]/li[1]/a")
+		h2Tail := htmlquery.SelectAttr(a, "href")
+		log.Printf("%s\n", h2Tail)
 
-	s := []string{"https://www.freefq.com", h2Tail}
-	h2 := strings.Join(s, "")
-	log.Printf("%s\n", h2)
+		s := []string{"https://www.freefq.com", h2Tail}
+		h2 := strings.Join(s, "")
+		log.Printf("%s\n", h2)
 
-	req = HttpNewRequest(h2, cookie)
-	resp2, err := myClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp2.Body.Close()
-	contents, _ = ioutil.ReadAll(resp2.Body)
-	doc, err = htmlquery.Parse(strings.NewReader(string(contents)))
-	if err != nil {
-		return nil, err
-	}
-	a = htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/table[2]/tbody/tr/td/div/fieldset/table/tbody/tr/td/a")
-	h3 := htmlquery.SelectAttr(a, "href")
-	log.Printf("%s\n", h3)
+		req = HttpNewRequest(h2, cookie)
+		resp2, err := myClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp2.Body.Close()
+		contents, _ = ioutil.ReadAll(resp2.Body)
+		doc, err = htmlquery.Parse(strings.NewReader(string(contents)))
+		if err != nil {
+			return nil, err
+		}
+		a = htmlquery.FindOne(doc, "/html/body/table[4]/tbody/tr/td[1]/table[2]/tbody/tr/td/table[2]/tbody/tr/td/div/fieldset/table/tbody/tr/td/a")
+		h3 := htmlquery.SelectAttr(a, "href")
+		log.Printf("%s\n", h3)
 
-	req = HttpNewRequest(h3, cookie)
-	resp3, err := myClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp3.Body.Close()
-	contents, _ = ioutil.ReadAll(resp3.Body)
-	strContents := string(contents)
-	log.Println("Freefq fetching Done.")
+		req = HttpNewRequest(h3, cookie)
+		resp3, err := myClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp3.Body.Close()
+		contents, _ = ioutil.ReadAll(resp3.Body)
+		strContents := string(contents)
+		log.Println("Freefq fetching Done.")
 
-	//Extract links from content
-	var links []string
-	for _, str := range strings.Fields(strContents) {
-		s := extractAvailableLink(str)
-		if s != "" {
-			links = append(links, s)
+		//Extract links from content
+		for _, str := range strings.Fields(strContents) {
+			s := extractAvailableLink(str)
+			if s != "" {
+				links = append(links, s)
+			}
 		}
 	}
 
+	log.Println("Freefq get", len(links), "links.")
 	return links, nil
 }

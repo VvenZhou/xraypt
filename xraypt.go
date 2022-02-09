@@ -25,13 +25,12 @@ var protocols = []string{
 
 var status bool
 
-var LogLineNum = 40
-
 func main() {
 
 	flag.IntVar(&tools.MainPort, "mp", 8123, "main proxy out port num")
 	flag.IntVar(&tools.PreProxyPort, "pp", 8123, "pre proxy in port num")
 	flag.IntVar(&tools.RoutinePeriod, "rp", 300, "auto mode refresh routine period (unit: second)")
+	flag.IntVar(&tools.PThreadNum, "tn", 160, "auto mode refresh routine period (unit: second)")
 
 	flag.Parse()
 
@@ -47,7 +46,7 @@ func main() {
 	os.MkdirAll(tools.TempPath, 0755)
 
 	cmdCh := make(chan string)	
-	feedbackCh := make(chan bool)		//0 for ready to go, 1 for busy, 2 for error
+	feedbackCh := make(chan bool)
 	dataCh := make(chan string, 3)
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -135,7 +134,7 @@ func main() {
 				cmd.Stdout = os.Stdout
 				cmd.Run()
 			case "windows":
-				cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
+				cmd := exec.Command("cmd", "/c", "cls")
 				cmd.Stdout = os.Stdout
 				cmd.Run()
 			}
