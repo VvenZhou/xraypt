@@ -100,7 +100,7 @@ func main() {
 
 			status = <- feedbackCh
 			log.Println()
-		case "p", "pause" :
+		case "pau", "pause" :
 			cmdCh <- "pause"
 			status = <- feedbackCh
 			log.Println()
@@ -108,8 +108,10 @@ func main() {
 			cmdCh <- "next"
 			status = <- feedbackCh
 			log.Println()
-//		case "print" :
-//			cmdCh <- "print"
+		case "p", "previous" :
+			cmdCh <- "previous"
+			status = <- feedbackCh
+			log.Println()
 		case "q", "quit" :
 			cmdCh <- "quit"
 
@@ -120,11 +122,17 @@ func main() {
 
 			time.Sleep(100 * time.Millisecond)
 			return
-		case "auto" :
+		case "a", "auto" :
 			cmdCh <- "auto"
 			status = <- feedbackCh
 			log.Println()
+		case "m", "manual" :
+			cmdCh <- "manual"
+			status = <- feedbackCh
+			log.Println()
 //		case "help" :
+//		case "print" :
+//			cmdCh <- "print"
 		case "clear", "clr" :
 
 			switch tools.OSPlatform {
@@ -144,7 +152,7 @@ func main() {
 			goto getInput
 		default:
 			status = true
-			log.Println("bad cmd")
+			log.Println("bad cmd:", sList[0])
 			goto getInput
 		}
 	}

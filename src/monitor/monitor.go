@@ -65,23 +65,49 @@ var BadNodesBuffer []*tools.Node
 var curStatus int
 var preStatus int
 
-var daemonStatus bool		//0 for stopped, 1 for started
+var daemonRunning bool
 
 func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
-	var ticker *time.Ticker
-	ticker = time.NewTicker(tools.RoutinePeriodDu)
-	ticker.Stop()
 
 	cmdToRoutineCh := make(chan bool)
 	feedbackFromRoutineCh := make(chan bool)
-
 	var mu sync.Mutex
+	var ticker *time.Ticker
+
+
+	ticker = time.NewTicker(tools.RoutinePeriodDu)
+	ticker.Stop()
+	go func() {
+		for {
+			select {
+			case <-cmdToRoutineCh :
+				feedbackFromRoutineCh <- true
+				return
+			case <-ticker.C :
+				ticker.Stop()
+				mu.Lock()
+				routine()
+				mu.Unlock()
+				ticker.Reset(tools.RoutinePeriodDu)
+			}
+		}
+	}()
 
 	curStatus = 0
 	preStatus = 0
 
-	firstIn()
+	err := firstIn()
+	if err != nil {
+		log.Println(err)
+
+		cmdToRoutineCh <- true
+		log.Println("Routine quit:", <- feedbackFromRoutineCh)
+
+		log.Println("Auto monitor quit")
+		feedbackCh <- true		//ready
+		return
+	}
 
 	feedbackCh <- true
 
@@ -114,12 +140,11 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				}
 				log.Println("Cmd: FetchNew")
 
-				if daemonStatus == false {
+				if daemonRunning == false {
 					log.Println("XrayDaemon is not running, you can't fetch anything.")
-					break
+				}else{
+					fetchNew()
 				}
-
-				fetchNew()
 
 				if curStatus == 1 {
 					ticker.Reset(tools.RoutinePeriodDu)
@@ -130,7 +155,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				mu.Lock()
 				log.Println("Cmd: Pause")
 
-				if daemonStatus {
+				if daemonRunning {
 					if curStatus == 1 {
 						ticker.Stop()
 					}
@@ -152,12 +177,36 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 					xrayDaemonStartStop("stop")
 					CurrentNodePos += 1
 					log.Println("Next Position:", CurrentNodePos)
+
 					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
 					xrayDaemonStartStop("start")
 				}else{
 					xrayDaemonStartStop("stop")
 					CurrentNodePos = 0
 					log.Println("Next Position:", CurrentNodePos)
+
+					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+					xrayDaemonStartStop("start")
+				}
+
+				mu.Unlock()
+				feedbackCh <- true
+			case "previous" :
+				mu.Lock()
+				log.Println("Cmd: Previous")
+
+				if CurrentNodePos > 0 {
+					xrayDaemonStartStop("stop")
+					CurrentNodePos -= 1
+					log.Println("Pre Position:", CurrentNodePos)
+
+					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+					xrayDaemonStartStop("start")
+				}else{
+					xrayDaemonStartStop("stop")
+					CurrentNodePos = len(FirstBench.GoodNodes) - 1
+					log.Println("Pre Position:", CurrentNodePos)
+
 					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
 					xrayDaemonStartStop("start")
 				}
@@ -170,7 +219,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				mu.Lock()
 				log.Println("Cmd: Quit")
 
-				if daemonStatus {
+				if daemonRunning {
 					xrayDaemonStartStop("stop")
 				}
 
@@ -185,11 +234,9 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 				nodeStack = append(FirstBench.GoodNodes, nodeStack...)
 				tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
 
-				if curStatus == 1 {
-					ticker.Stop()
-					cmdToRoutineCh <- true 
-					log.Println("Routine quit:", <- feedbackFromRoutineCh)
-				}
+				ticker.Stop()
+				cmdToRoutineCh <- true
+				log.Println("Routine quit:", <- feedbackFromRoutineCh)
 
 				log.Println("Auto monitor quit")
 				feedbackCh <- true		//ready
@@ -203,30 +250,34 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 					switch preStatus {
 					case 0 :	// First in
 					case 2 :
-						routine()
 						//TODO: Stop Manual
+						routine()
 					}
 
 					ticker.Reset(tools.RoutinePeriodDu)
-					go func() {
-						for {
-							select {
-							case <-cmdToRoutineCh :
-								feedbackFromRoutineCh <- true
-								return
-							case <-ticker.C :
-								ticker.Stop()
-								mu.Lock()
-								routine()
-								mu.Unlock()
-								ticker.Reset(tools.RoutinePeriodDu)
-							}
-						}
-					}()
 					log.Println("Auto mode Started")
 					preStatus = 1
 				}else{
 					log.Println("Already in Auto mode")
+				}
+
+				mu.Unlock()
+				feedbackCh <- true
+			case "manual" :
+				mu.Lock()
+				log.Println("Cmd: Manual")
+				curStatus = 2
+				if preStatus != 2{
+					switch preStatus {
+					case 0:
+					case 1:
+						//TODO: Stop Auto
+						ticker.Stop()
+					}
+					log.Println("Manual mode Started")
+					preStatus = 2
+				}else{
+					log.Println("Already in Manual mode")
 				}
 
 				mu.Unlock()
@@ -236,7 +287,7 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 	}
 }
 
-func firstIn() {
+func firstIn() error {
 	log.Println("AutoMonitor FirstIn")
 
 	nodeStack, err := tools.GetNodesFromFormatedFile(tools.GoodOutPath)
@@ -247,7 +298,12 @@ func firstIn() {
 	var bench Bench
 	updateOneBenchFromStackR(&bench, &nodeStack)
 	if len(bench.GoodNodes) == 0 {
-		panic("no good node to use")
+		log.Println("No good nodes in Good.txt, trying to find one in bad...")
+		refresh([]string{"bad"})
+		updateOneBenchFromStackR(&bench, &nodeStack)
+		if len(bench.GoodNodes) == 0 {
+			return errors.New("NO GOOD NODES AT ALL")
+		}
 	}
 
 	CurrentNodePos = 0
@@ -262,6 +318,7 @@ func firstIn() {
 	xrayDaemonStartStop("start")
 
 	log.Println("FirstIn done")
+	return nil
 }
 
 func fetchNew() {
@@ -445,11 +502,11 @@ func xrayDaemonStartStop(cmd string) {
 	case "start" :
 		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
 		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
-		daemonStatus = true
+		daemonRunning = true
 	case "stop" :
 		cmdToDaemonCh <- "TERM"
 		log.Println("XrayDaemon quit:", <- feedbackFromDaemonCh)
-		daemonStatus = false
+		daemonRunning = false
 	}
 }
 
