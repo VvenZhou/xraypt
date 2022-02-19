@@ -19,13 +19,14 @@ type Xray struct {
 func XrayDaemon(node *Node, cmdCh <-chan string, feedbackCh chan<- string) (error) {
 	var x Xray
 
-	node.Port = MainPort
+//	node.Port = MainPort
 
-	node.CreateFinalJson(OutPath, "cur.json")
+	node.CreateFinalJson(OutPath, MainPort, "cur.json")
 	err := x.Init(MainPort, node.JsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 //	stdout, err := x.Run()
 	_, err = x.Run()
 	if err != nil {

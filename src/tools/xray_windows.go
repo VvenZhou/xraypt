@@ -22,7 +22,7 @@ func XrayDaemon(node *Node, cmdCh <-chan string, feedbackCh chan<- string) (erro
 
 	node.Port = MainPort
 
-	node.CreateFinalJson(OutPath, "cur.json")
+	node.CreateFinalJson(OutPath, MainPort, "cur.json")
 	err := x.Init(MainPort, node.JsonPath)
 	if err != nil {
 		log.Fatal(err)

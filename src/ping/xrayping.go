@@ -4,9 +4,11 @@ import (
 	"log"
 	"fmt"
 	"time"
+	"net/http"
+	"errors"
 
 	"github.com/VvenZhou/xraypt/src/tools"
-	"github.com/VvenZhou/xraypt/src/xray"
+//	"github.com/VvenZhou/xraypt/src/xray"
 )
 
 func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Node, float64, error){
@@ -25,8 +27,14 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 		threadNum = tools.PThreadNum
 	}
 
-	for i := 1; i <= threadNum; i++ {
-		go myPing(pingJob, pingResult)
+	//TODO: get free ports
+	ports, err := tools.GetFreePorts(threadNum)
+	if err != nil {
+		panic("no enough ports")
+	}
+
+	for _, port := range(ports) {
+		go myPing(pingJob, pingResult, port, "https://duckduckgo.com")
 //		time.Sleep(time.Millisecond * 20)
 	}
 
@@ -50,7 +58,6 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 			n.Timeout += 1
 			badPingNodes = append(badPingNodes, n)
 		}else if n.AvgDelay == -1 {
-			//log.Println("-2 error:", n.ErrorInfo)
 			n.Timeout = -1
 			errorNodes = append(errorNodes, n)
 		}else{
@@ -68,58 +75,78 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 	return goodPingNodes, badPingNodes, errorNodes, timeOfPing, nil 
 }
 
-func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
+//func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
+func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) {
+	pClient := tools.HttpClientGet(port, tools.PTimeout)
+	pRClient := tools.HttpClientGet(port, tools.PRealTimeout)
+	req := tools.HttpNewRequest(url)
 	for n := range jobs {
 		var good int = 0
-		var fail int = 0
+//		var fail int = 0
 		var stat bool = false
+		var x tools.Xray
 
-		server, err := xray.StartXray(n.Type, n.ShareLink, false, true)
+		err := n.CreateJson(tools.TempPath, port)
 		if err != nil {
 			n.AvgDelay = -1
 			result <- n
-			err = fmt.Errorf("xray.StartXray():", err)
+			err = fmt.Errorf("CreateJson:", err)
 			n.ErrorInfo = err
 			continue
 		}
 
-		if err := server.Start(); err != nil {
+		err = x.Init(port, n.JsonPath)
+		if err != nil {
 			n.AvgDelay = -1
 			result <- n
-			err = fmt.Errorf("server.Start():", err)
+			err = fmt.Errorf("x.Init", err)
 			n.ErrorInfo = err
 			continue
 		}
-//		time.Sleep(time.Millisecond * 100)
-//		defer server.Close()
 
-//		for i := 0; i < tools.PCnt; i++ {
-////			_, code, _, err := doPing(pClient, "https://www.google.com/gen_204", nil, false)
-//			_, err := xray.MeasureDelay(server, tools.PTimeout, "https://www.google.com/gen_204")
-//			if err == nil {
-//				good += 1
-//				if good >= tools.PingLeastGood {
-//					stat = true
-//					break
-//				}
-//			}
-//			time.Sleep(time.Millisecond * 50)
+		_, err = x.Run()
+		if err != nil {
+			n.AvgDelay = -1
+			result <- n
+			err = fmt.Errorf("x.Run", err)
+			n.ErrorInfo = err
+			continue
+		}
+
+//		server, err := xray.StartXray(n.Type, n.ShareLink, false, true)
+//		if err != nil {
+//			n.AvgDelay = -1
+//			result <- n
+//			err = fmt.Errorf("xray.StartXray():", err)
+//			n.ErrorInfo = err
+//			continue
 //		}
-		for {
-			_, err := xray.MeasureDelay(server, time.Millisecond * 5000, "https://duckduckgo.com")
+//
+//		if err := server.Start(); err != nil {
+//			n.AvgDelay = -1
+//			result <- n
+//			err = fmt.Errorf("server.Start():", err)
+//			n.ErrorInfo = err
+//			continue
+//		}
+
+		for i:=0; i< tools.PCnt; i++ {
+//			_, err := xray.MeasureDelay(server, time.Millisecond * 5000, "https://www.google.com/gen_204")
+//			_, err := xray.MeasureDelay(server, time.Millisecond * 5000, "https://duckduckgo.com")
+			_, err := doPing(&pClient, req)
 			if err == nil {
 				good += 1
-				if good >= tools.PingLeastGood {
+				if good >= tools.PLeastGood {
 					stat = true
 					break
 				}
-			}else{
-				fail += 1
-				if fail >= tools.PingLeastGood + 2 {
-					break
-				}
+//			}else{
+//				fail += 1
+//				if fail >= tools.PCnt {
+//					break
+//				}
 			}
-//			time.Sleep(time.Millisecond * 20)
+//			time.Sleep(time.Millisecond * 10)
 		}
 
 		if stat {
@@ -127,13 +154,14 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 			var pRealDelayList []int
 
 			for i := 0; i < tools.PRealCnt; i++{
-//				delay, _, _, err := doPing(pRealClient, "https://duckduckgo.com", nil, true)
-				delay, err := xray.MeasureDelay(server, tools.PRealTimeout, "https://duckduckgo.com")
+//				delay, err := xray.MeasureDelay(server, tools.PRealTimeout, "https://duckduckgo.com")
+//				delay, err := xray.MeasureDelay(server, tools.PRealTimeout, "https://www.google.com/gen_204")
+				delay, err := doPing(&pRClient, req)
 				if err == nil {
 //					log.Println("delay:", delay)
 					pRealDelayList = append(pRealDelayList, delay)
 				}
-//				time.Sleep(time.Millisecond * 20)
+//				time.Sleep(time.Millisecond * 10)
 			}
 			if len(pRealDelayList) >= tools.PRealLeastGood {
 				pRealAvgDelay = getAvg(pRealDelayList)
@@ -147,50 +175,38 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 		}
 
 		result <- n
-		server.Close()
+
+
+//		server.Close()
+		err = x.Stop()
+		if err != nil {
+			panic("x Stop error")
+		}
 	}
 }
 
-//func doPing(url string, timeout time.Duration) (int, int, []*http.Cookie, error){
-//	var coo []*http.Cookie
-//
-//	req, err := http.NewRequest("GET", url, nil)
-//	if err != nil {
-//		err = fmt.Errorf("http.NewRequest:", err)
-//		return 0, 0, nil, err
-//	}
-////	if pReal {
-////		for i := range cookies {
-////			req.AddCookie(cookies[i])
-////		}
-//		req.Close = true
-////		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36")
-////	}
-//
-//	start := time.Now()
-//	resp, err := myClient.Do(req) //send request
-//	stop := time.Now()
-//
-//	if err != nil {
-//		return 0, 0, nil, err
-//	}
-//	defer resp.Body.Close()
-//	code := resp.StatusCode
-//
+func doPing(myClient *http.Client, req *http.Request) (int, error){
+
+	start := time.Now()
+	resp, err := myClient.Do(req) //send request
+	stop := time.Now()
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	code := resp.StatusCode
+
 //	if code >= 399 && code != 429{
-//	//if code >= 399 {
-//		return 0, code, nil, errors.New("Ping err: StatusCode error")
-//	}
-//
-//	elapsed := stop.Sub(start)
-//	delay := elapsed.Milliseconds() / 2
-//	if pReal {
-//		coo = resp.Cookies()
-//		return int(delay), code, coo, nil
-//	}else{
-//		return int(delay), code, nil, nil
-//	}
-//}
+	if code >= 399 {
+		return 0, errors.New("Ping err: StatusCode error")
+	}
+
+	elapsed := stop.Sub(start)
+	delay := elapsed.Milliseconds()
+
+	return int(delay/2), nil
+}
 
 func getAvg(list []int) int {
 	var min, max, total int

@@ -176,7 +176,10 @@ func AutoMonitor(cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan stri
 
 
 				var nodeStack []*tools.Node
-				nodeStack, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+				nodeStack, err := tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+				if err != nil {
+					log.Println(err)
+				}
 				nodeStackPop(&nodeStack, FirstBench.PreLength)	//remove old firstBench nodes
 
 				nodeStack = append(FirstBench.GoodNodes, nodeStack...)
@@ -238,13 +241,13 @@ func firstIn() {
 
 	nodeStack, err := tools.GetNodesFromFormatedFile(tools.GoodOutPath)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	var bench Bench
 	updateOneBenchFromStackR(&bench, &nodeStack)
 	if len(bench.GoodNodes) == 0 {
-		return
+		panic("no good node to use")
 	}
 
 	CurrentNodePos = 0

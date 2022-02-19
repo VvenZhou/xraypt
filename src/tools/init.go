@@ -4,6 +4,7 @@ import (
 	"runtime"
 	"time"
 	"os"
+	"github.com/google/uuid"
 )
 
 var PreProxyPort int
@@ -41,7 +42,7 @@ const SThreadNum = 10
 const DSLine = 2.0
 
 const PCnt = 5
-const PingLeastGood = 2
+const PLeastGood = 2
 
 const PRealCnt = 5
 const PRealLeastGood = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayping.go - getAvg())
@@ -49,7 +50,7 @@ const PRealLeastGood = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayp
 const NodeTimeoutTolerance = 3
 
 const subT = 5000
-const pT = 2000 //ms
+const pT = 5000 //ms
 const pRealT = 2000 //ms
 const sT = 15000 //ms
 
@@ -76,6 +77,7 @@ func PreCheck(protocols []string) {
 }
 
 func gVarInit(){
+	uuid.EnableRandPool()
 	switch OSPlatform {
 	case "linux":
 		XrayPath = "tools/xray"

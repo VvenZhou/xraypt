@@ -14,7 +14,7 @@ type VmessShare struct {
 	Add string `json:"add"`
 	Port string `json:"port"`
 	Id string `json:"id"`
-	Aid string `json:"aid"`
+//	Aid string `json:"aid"`
 	//Scy string `json:"scy"`
 	Net string `json:"net"`
 	//Type string `json:"type"`
@@ -23,13 +23,6 @@ type VmessShare struct {
 	Tls string `json:"tls"`
 	//Sni string `json:"sni"`
 }
-
-//type VmessUser struct {
-//	Id string `json:"id"`
-//	AlterId int `json:"alterId, omitempty"`
-//	Security string `json:"security"`
-//	Level int `json:"level, omitempty"`
-//}
 
 type User_ struct {
 	Id string `json:"id"`
@@ -60,8 +53,9 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 	}
 
 	port, _ := strconv.Atoi(vmShare.Port)
-	aid, _ := strconv.Atoi(vmShare.Aid)
-	user := User_{Id: vmShare.Id, AlterId: aid,  Security: "auto", Level: 0}
+//	aid, _ := strconv.Atoi(vmShare.Aid)
+//	user := User_{Id: vmShare.Id, AlterId: aid,  Security: "auto", Level: 0}
+	user := User_{Id: vmShare.Id, Security: "auto", Level: 0}
 	vnext := Vnext_ { Address: vmShare.Add, 
 			  Port: port,
 			  Users: []User_{ user },
@@ -116,12 +110,12 @@ func VmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
 		vmShareP.Port = m["port"].(string)
 	}
 	vmShareP.Id = m["id"].(string)
-	if i, ok := m["aid"].(float64); ok {
-		flt := strconv.FormatFloat(i, 'f', -1, 64)
-		vmShareP.Aid = flt
-	}else if s, ok := m["aid"].(string); ok {
-		vmShareP.Aid = s
-	}
+//	if i, ok := m["aid"].(float64); ok {
+//		flt := strconv.FormatFloat(i, 'f', -1, 64)
+//		vmShareP.Aid = flt
+//	}else if s, ok := m["aid"].(string); ok {
+//		vmShareP.Aid = s
+//	}
 	if s, ok := m["net"].(string); ok {
 		vmShareP.Net = s
 	}
@@ -172,7 +166,7 @@ func VmRemoveDuplicateNodes(nodes *[]*Node) {
 //Not used, yet.
 func vmShareCompare(a, b *VmessShare) bool {
 
-	if a.Add == b.Add && a.Port == b.Port && a.Id == b.Id && a.Aid == b.Aid && 
+	if a.Add == b.Add && a.Port == b.Port && a.Id == b.Id && 
 		a.Net == b.Net && a.Host == b.Host && a.Path == b.Path && a.Tls == b.Tls {
 		return true
 	}

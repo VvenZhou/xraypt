@@ -70,12 +70,19 @@ func HttpClientGet(port int, timeout time.Duration) http.Client {
 	}else{
 		str := []string{"http://127.0.0.1", strconv.Itoa(port)}
 		proxyUrl, _ := url.Parse(strings.Join(str, ":"))
-		myClient := http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
+		myClient := http.Client{Transport: &http.Transport{DisableKeepAlives: false, Proxy: http.ProxyURL(proxyUrl)}, Timeout: timeout}
 		return myClient
 	}
 }
 
-func HttpNewRequest(url string, cookies ...[]*http.Cookie) *http.Request {
+func HttpNewRequest(url string) *http.Request {
+	req, _ := http.NewRequest("HEAD", url, nil)
+//	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0i")
+//	req.Close = true
+	return req
+}
+
+func HttpNewRequestWithCookies(url string, cookies ...[]*http.Cookie) *http.Request {
 	var coo []*http.Cookie
 
 	req, _ := http.NewRequest("GET", url, nil)

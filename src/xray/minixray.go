@@ -12,64 +12,62 @@ import (
 	"time"
 
 	"github.com/VvenZhou/xraypt/src/tools"
+
 	applog "github.com/xtls/xray-core/app/log"
 	commlog "github.com/xtls/xray-core/common/log"
-
 	"github.com/xtls/xray-core/app/dispatcher"
 	"github.com/xtls/xray-core/app/proxyman"
 	v2net "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	core "github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/infra/conf"
+	cfgcommon "github.com/xtls/xray-core/infra/conf"
 )
 
-type VmessLink struct {
-	Ver      string      `json:"v"`
-	Add      string      `json:"add"`
-	Aid      interface{} `json:"aid"`
-	Host     string      `json:"host"`
-	ID       string      `json:"id"`
-	Net      string      `json:"net"`
-	Path     string      `json:"path"`
-	Port     interface{} `json:"port"`
-	Ps       string      `json:"ps"`
-	TLS      string      `json:"tls"`
-	Type     string      `json:"type"`
-	OrigLink string      `json:"-"`
-}
+//type VmessLink struct {
+//	Ver      string      `json:"v"`
+//	Add      string      `json:"add"`
+////	Aid      interface{} `json:"aid"`
+//	Host     string      `json:"host"`
+//	ID       string      `json:"id"`
+//	Net      string      `json:"net"`
+//	Path     string      `json:"path"`
+//	Port     interface{} `json:"port"`
+//	Ps       string      `json:"ps"`
+//	TLS      string      `json:"tls"`
+//	Type     string      `json:"type"`
+//	OrigLink string      `json:"-"`
+//}
 
-//func StartXray(lType string, shareLink string, verbose, useMux, allowInsecure bool) (*core.Instance, error) {
 func StartXray(lType string, shareLink string, useMux, allowInsecure bool) (*core.Instance, error) {
 	loglevel := commlog.Severity_Error
-//	if verbose {
-//		loglevel = commlog.Severity_Debug
-//	}
-
 	var ob *core.OutboundHandlerConfig
 	if lType == "vmess" {
-		var vmShare tools.VmessShare
-		var lk VmessLink
+		var lk *VmessLink
 
-		err := tools.VmlinkToVmshare(&vmShare, shareLink)
+		lk, err := ParseVmess("vmess://"+shareLink)
 		if err != nil {
-			return nil, err
+			var vmShare tools.VmessShare
+			lk = new(VmessLink)
+			err := tools.VmlinkToVmshare(&vmShare, shareLink)
+			if err != nil {
+				return nil, err
+			}
+
+			lk.Ver = "2"
+			lk.Add = vmShare.Add
+			lk.Host = vmShare.Host
+			lk.ID = vmShare.Id
+			lk.Net = vmShare.Net
+			lk.Path = vmShare.Path
+			lk.Port = vmShare.Port
+			lk.Ps = "none"
+			lk.TLS = vmShare.Tls
+			lk.Type = "none"
+			lk.OrigLink = "vmess://" + shareLink
 		}
 
-		lk.Ver = "2"
-		lk.Add = vmShare.Add
-		lk.Aid = vmShare.Aid
-		lk.Host = vmShare.Host
-		lk.ID = vmShare.Id
-		lk.Net = vmShare.Net
-		lk.Path = vmShare.Path
-		lk.Port = vmShare.Port
-		lk.Ps = "none"
-		lk.TLS = vmShare.Tls
-		lk.Type = "none"
-		lk.OrigLink = "vmess://" + shareLink
-
-//		fmt.Println("\n" + lk.DetailStr())
-		ob, err = Vmess2Outbound(&lk, useMux, allowInsecure)
+		ob, err = Vmess2Outbound(lk, useMux, allowInsecure)
 		if err != nil {
 			return nil, err
 		}
@@ -94,15 +92,10 @@ func StartXray(lType string, shareLink string, useMux, allowInsecure bool) (*cor
 				ErrorLogLevel: loglevel,
 			}),
 			serial.ToTypedMessage(&dispatcher.Config{}),
-			serial.ToTypedMessage(&proxyman.InboundConfig{}),
+//			serial.ToTypedMessage(&proxyman.InboundConfig{}),
 			serial.ToTypedMessage(&proxyman.OutboundConfig{}),
 		},
 	}
-
-//	fileWriterCreater, err := commlog.CreateFileLogWriter(os.DevNull)
-//	if err != nil {
-//		panic(err)
-//	}
 
 //	commlog.RegisterHandler(commlog.NewLogger(fileWriterCreater))
 	config.Outbound = []*core.OutboundHandlerConfig{ob}
@@ -120,7 +113,8 @@ func MeasureDelay(inst *core.Instance, timeout time.Duration, dest string) (int,
 		return 0, err
 	}
 
-	req, _ := http.NewRequest("GET", dest, nil)
+	req, _ := http.NewRequest("HEAD", dest, nil)
+//	req.Close = true
 
 	start := time.Now()
 	resp, err := c.Do(req)
@@ -185,14 +179,14 @@ func Vmess2Outbound(v *VmessLink, useMux, allowInsecure bool) (*core.OutboundHan
 		s.WSSettings.Headers = map[string]string{
 			"Host": v.Host,
 		}
-//	case "h2", "http":
-//		s.HTTPSettings = &conf.HTTPConfig{
-//			Path: v.Path,
-//		}
-//		if v.Host != "" {
-//			h := cfgcommon.StringList(strings.Split(v.Host, ","))
-//			s.HTTPSettings.Host = &h
-//		}
+	case "h2", "http":
+		s.HTTPSettings = &conf.HTTPConfig{
+			Path: v.Path,
+		}
+		if v.Host != "" {
+			h := cfgcommon.StringList(strings.Split(v.Host, ","))
+			s.HTTPSettings.Host = &h
+		}
 	}
 
 	if v.TLS == "tls" {
@@ -213,13 +207,12 @@ func Vmess2Outbound(v *VmessLink, useMux, allowInsecure bool) (*core.OutboundHan
       "users": [
         {
           "id": "%s",
-          "alterId": %v,
           "security": "auto"
         }
       ]
     }
   ]
-}`, v.Add, v.Port, v.ID, v.Aid)))
+}`, v.Add, v.Port, v.ID)))
 	out.Settings = &oset
 	return out.Build()
 }
@@ -249,7 +242,7 @@ func CoreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, e
 	}
 
 	tr := &http.Transport{
-		DisableKeepAlives: false,
+		DisableKeepAlives: true,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dest, err := v2net.ParseDestination(fmt.Sprintf("%s:%s", network, addr))
 			if err != nil {

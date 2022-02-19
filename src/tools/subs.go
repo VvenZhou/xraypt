@@ -64,7 +64,7 @@ func (l *Links) AddToNodeLists(nodeLs *NodeLists) {
 
 
 func GetAllNodes(nodeLs *NodeLists) {
-	// Get nodes from GoodOut.txt && 
+	// Get nodes from GoodOut.txt
 	GetNodeLsFromFormatedFile(nodeLs, GoodOutPath)
 
 	var nodeLs2 NodeLists
@@ -75,6 +75,7 @@ func GetAllNodes(nodeLs *NodeLists) {
 		}
 	}
 	sort.Stable(ByTimeout(nodeLs.Vms))
+
 	for _, node := range nodeLs2.Sses {
 		if node.Timeout < MaxTimeoutCnt {
 			nodeLs.Sses = append(nodeLs.Sses, node)
@@ -82,6 +83,7 @@ func GetAllNodes(nodeLs *NodeLists) {
 	}
 	sort.Stable(ByTimeout(nodeLs.Sses))
 
+	//Get nodes from Web
 	var subs []string
 	var subLs Links
 	byteData, err := ioutil.ReadFile(SubsFilePath)
@@ -97,15 +99,13 @@ func GetAllNodes(nodeLs *NodeLists) {
 	//Remove duplicates
 	log.Println("start remove duplicates...")
 	if FlagVm && len(nodeLs.Vms)!=0 {
-		log.Printf("vm befor: %d    ", len(nodeLs.Vms))
+		log.Printf("vm befor: %d", len(nodeLs.Vms))
 		VmRemoveDuplicateNodes(&(nodeLs.Vms))
-		//nodeLs.Vms = VmRemoveDulpicate(nodeLs.Vms)
-		log.Printf("after: %d\n", len(nodeLs.Vms))
+		log.Printf("after: %d", len(nodeLs.Vms))
 	}
 	if FlagSs && len(nodeLs.Sses)!=0 {
-		log.Printf("ss befor: %d    ", len(nodeLs.Sses))
+		log.Printf("ss befor: %d", len(nodeLs.Sses))
 		SsRemoveDuplicateNodes(&(nodeLs.Sses))
-		//nodeLs.Sses = SsRemoveDulpicate(nodeLs.Sses)
 		log.Printf("after: %d\n", len(nodeLs.Sses))
 	}
 	log.Println("remove duplicates done...")
@@ -166,7 +166,6 @@ func getLinks(subLs *Links, subs []string) {
 				subLs.Vms = append(subLs.Vms, l[1])
 			}
 		}
-
 	}
 
 	//Sublink
@@ -190,8 +189,6 @@ func getLinks(subLs *Links, subs []string) {
 
 	//Dispatch links
 	DispatchLinks(subLs, links)
-
-
 }
 
 func GetNodeLsFromFile(nodeLs *NodeLists, filePath string) {
@@ -478,13 +475,14 @@ func getVmFromYou() ([]string, error) {
 }
 
 func getAllFromFreefq() ([]string, error) {
+	log.Println("Freefq fetching start...")
 	//Get content from website
 	var links []string
 
-	log.Println("Freefq fetching start...")
-	var cookie []*http.Cookie
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
-	subLinks := []string{"https://www.freefq.com/v2ray/", "https://www.freefq.com/free-ss/"}
+	subLinks := []string{"https://www.freefq.com/v2ray/", 
+			"https://www.freefq.com/free-ss/",
+			"https://www.freefq.com/free-xray/"}
 	for _, subLink := range(subLinks) {
 		req := HttpNewRequest(subLink)
 
@@ -494,10 +492,6 @@ func getAllFromFreefq() ([]string, error) {
 		}
 		defer resp.Body.Close()
 
-		coo := resp.Cookies()
-		if len(coo) > 0 {
-			cookie = coo
-		}
 		contents, _ := ioutil.ReadAll(resp.Body)
 
 		doc, err := htmlquery.Parse(strings.NewReader(string(contents)))
@@ -512,7 +506,7 @@ func getAllFromFreefq() ([]string, error) {
 		h2 := strings.Join(s, "")
 		log.Printf("%s\n", h2)
 
-		req = HttpNewRequest(h2, cookie)
+		req = HttpNewRequest(h2)
 		resp2, err := myClient.Do(req)
 		if err != nil {
 			return nil, err
@@ -527,7 +521,7 @@ func getAllFromFreefq() ([]string, error) {
 		h3 := htmlquery.SelectAttr(a, "href")
 		log.Printf("%s\n", h3)
 
-		req = HttpNewRequest(h3, cookie)
+		req = HttpNewRequest(h3)
 		resp3, err := myClient.Do(req)
 		if err != nil {
 			return nil, err
@@ -535,7 +529,6 @@ func getAllFromFreefq() ([]string, error) {
 		defer resp3.Body.Close()
 		contents, _ = ioutil.ReadAll(resp3.Body)
 		strContents := string(contents)
-		log.Println("Freefq fetching Done.")
 
 		//Extract links from content
 		for _, str := range strings.Fields(strContents) {
@@ -546,6 +539,7 @@ func getAllFromFreefq() ([]string, error) {
 		}
 	}
 
+	log.Println("Freefq fetching Done.")
 	log.Println("Freefq get", len(links), "links.")
 	return links, nil
 }

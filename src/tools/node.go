@@ -54,20 +54,19 @@ func (a ByTimeout) Less(i, j int) bool { return a[i].Timeout > a[j].Timeout }
 
 
 func (n *Node) Init(ntype, shareLink string) {
-	//n.Id = id
 	n.Type = ntype
 	n.ShareLink = shareLink
 }
 
-func (n *Node) CreateJson(dirPath string) error {
-	err := (*n).createConfig()
+func (n *Node) CreateJson(dirPath string, port int) error {
+	err := (*n).genConfig()
 	if err != nil {
 		err = fmt.Errorf("createConfig:", err)
 		return err
 	}
 
-	name := uuid.New().String()
-	s := []string{dirPath, strings.TrimSpace(string(name)), ".json"}
+	name := uuid.NewString()
+	s := []string{dirPath, name, ".json"}
 	n.JsonPath = strings.Join(s, "")
 
 	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
@@ -82,7 +81,7 @@ func (n *Node) CreateJson(dirPath string) error {
 		return err
 	}
 
-	err = JsonChangePort(n.JsonPath, n.JsonPath, n.Port)
+	err = JsonChangePort(n.JsonPath, n.JsonPath, port)
 	if err != nil {
 		err = fmt.Errorf("JsonChangePort:", err)
 		return err
@@ -91,8 +90,8 @@ func (n *Node) CreateJson(dirPath string) error {
 	return nil
 }
 
-func (n *Node) CreateFinalJson(dirPath string, name string) error {
-	err := (*n).createConfig()
+func (n *Node) CreateFinalJson(dirPath string, port int, name string) error {
+	err := (*n).genConfig()
 	if err != nil {
 		err = fmt.Errorf("createConfig:", err)
 		return err
@@ -114,7 +113,7 @@ func (n *Node) CreateFinalJson(dirPath string, name string) error {
 		return err
 	}
 
-	err = JsonChangePort(n.JsonPath, n.JsonPath, n.Port)
+	err = JsonChangePort(n.JsonPath, n.JsonPath, port)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -123,7 +122,7 @@ func (n *Node) CreateFinalJson(dirPath string, name string) error {
 	return nil
 }
 
-func (n *Node) createConfig() error {
+func (n *Node) genConfig() error {
 	var con Config
 	switch n.Type{
 		case "vmess": 

@@ -15,7 +15,6 @@ import (
 	"github.com/VvenZhou/xraypt/src/monitor"
 )
 
-
 var protocols = []string{
 	"vmess",
 	"vless",
@@ -30,7 +29,7 @@ func main() {
 	flag.IntVar(&tools.MainPort, "mp", 8123, "main proxy out port num")
 	flag.IntVar(&tools.PreProxyPort, "pp", 8123, "pre proxy in port num")
 	flag.IntVar(&tools.RoutinePeriod, "rp", 300, "auto mode refresh routine period (unit: second)")
-	flag.IntVar(&tools.PThreadNum, "tn", 160, "auto mode refresh routine period (unit: second)")
+	flag.IntVar(&tools.PThreadNum, "tn", 160, "ping worker(thread) num")
 
 	flag.Parse()
 
