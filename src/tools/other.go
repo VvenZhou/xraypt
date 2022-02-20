@@ -75,8 +75,8 @@ func HttpClientGet(port int, timeout time.Duration) http.Client {
 	}
 }
 
-func HttpNewRequest(url string) *http.Request {
-	req, _ := http.NewRequest("HEAD", url, nil)
+func HttpNewRequest(method string, url string) *http.Request {
+	req, _ := http.NewRequest(method, url, nil)
 //	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0i")
 //	req.Close = true
 	return req

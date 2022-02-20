@@ -373,7 +373,7 @@ func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
 func getStrFromSublink(subLink string) ([]string, error) {
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
 	//myClient := HttpClientGet(0, SubTimeout)
-	req := HttpNewRequest(subLink)
+	req := HttpNewRequest("GET", subLink)
 
 	resp, err := myClient.Do(req)
 	if err != nil {
@@ -405,7 +405,7 @@ func getVmFromYou() ([]string, error) {
 	log.Println("You fetching start...")
 	var cookie []*http.Cookie
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
-	req := HttpNewRequest("https://www.youneed.win/free-v2ray")
+	req := HttpNewRequest("GET", "https://www.youneed.win/free-v2ray")
 
 	rHtml, err := myClient.Do(req)
 	if err != nil {
@@ -484,7 +484,7 @@ func getAllFromFreefq() ([]string, error) {
 			"https://www.freefq.com/free-ss/",
 			"https://www.freefq.com/free-xray/"}
 	for _, subLink := range(subLinks) {
-		req := HttpNewRequest(subLink)
+		req := HttpNewRequest("GET", subLink)
 
 		resp, err := myClient.Do(req)
 		if err != nil {
@@ -506,7 +506,7 @@ func getAllFromFreefq() ([]string, error) {
 		h2 := strings.Join(s, "")
 		log.Printf("%s\n", h2)
 
-		req = HttpNewRequest(h2)
+		req = HttpNewRequest("GET", h2)
 		resp2, err := myClient.Do(req)
 		if err != nil {
 			return nil, err
@@ -521,7 +521,7 @@ func getAllFromFreefq() ([]string, error) {
 		h3 := htmlquery.SelectAttr(a, "href")
 		log.Printf("%s\n", h3)
 
-		req = HttpNewRequest(h3)
+		req = HttpNewRequest("GET", h3)
 		resp3, err := myClient.Do(req)
 		if err != nil {
 			return nil, err

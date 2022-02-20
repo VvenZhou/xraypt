@@ -79,7 +79,7 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) {
 	pClient := tools.HttpClientGet(port, tools.PTimeout)
 	pRClient := tools.HttpClientGet(port, tools.PRealTimeout)
-	req := tools.HttpNewRequest(url)
+	req := tools.HttpNewRequest("HEAD", url)
 	for n := range jobs {
 		var good int = 0
 //		var fail int = 0
