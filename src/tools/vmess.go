@@ -42,7 +42,6 @@ type VmessSettings struct {
 	Vnext []Vnext_ `json:"vnext"`
 }
 
-//func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 	var vmShare VmessShare
 
@@ -78,7 +77,7 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 	if vmShare.Tls == "tls" {
 		vmess.StreamSettings.Security = "tls"
 		vmess.StreamSettings.TlsSettings.ServerName = vmShare.Host
-		vmess.StreamSettings.TlsSettings.AllowInsecure = true
+//		vmess.StreamSettings.TlsSettings.AllowInsecure = false
 	}
 	vmess.Mx.Enabled = false
 

@@ -146,7 +146,7 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url st
 //					break
 //				}
 			}
-//			time.Sleep(time.Millisecond * 10)
+			time.Sleep(time.Millisecond * 10)
 		}
 
 		if stat {
@@ -161,7 +161,7 @@ func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url st
 //					log.Println("delay:", delay)
 					pRealDelayList = append(pRealDelayList, delay)
 				}
-//				time.Sleep(time.Millisecond * 10)
+				time.Sleep(time.Millisecond * 10)
 			}
 			if len(pRealDelayList) >= tools.PRealLeastGood {
 				pRealAvgDelay = getAvg(pRealDelayList)

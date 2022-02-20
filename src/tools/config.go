@@ -82,6 +82,9 @@ func GenFinalConfig(con *Config) {
 		Domain []string `json:"domain"`
 		OutboundTag string `json:"outboundTag"`
 	}
+	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: -1, Protocol: "http"}
+	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
+	(*con).Inbounds = []interface{}{ htIn, soIn }
 
 	s1 := DnsServer{ Address: "8.8.8.8", Domains: []string{"geosite:geolocation-!cn"}}
 	s2 := DnsServer{ Address: "1.1.1.1", Domains: []string{"geosite:geolocation-!cn"}}
@@ -102,12 +105,14 @@ func GenFinalConfig(con *Config) {
 }
 
 func OutboundToTestConfig(con *Config, out Outbound ) {
-	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: 8123, Protocol: "http"}
-	soIn := SocksIn{Tag: "socks-in", Port: 1080, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
+	htIn := HttpIn{Tag: "http-in", Listen: "::", Port: -1, Protocol: "http"}
+//	soIn := SocksIn{Tag: "socks-in", Port: 0, Listen: "::", Protocol: "socks", Settings: struct{Auth string `json:"auth"`; Ip string `json:"ip"`; Udp bool `json:"udp"`}{Auth: "noauth", Udp: true, Ip: "127.0.0.1"}}
 	//var con Config
-	(*con).Log.Loglevel = "error"
-	(*con).Inbounds = []interface{}{ htIn, soIn }
-//	(*con).Inbounds = []interface{}{ htIn }
+	(*con).Log.Loglevel = "none"
+	con.Log.Access = "none"
+	con.Log.Error = "none"
+//	(*con).Inbounds = []interface{}{ htIn, soIn }
+	(*con).Inbounds = []interface{}{ htIn }
 	(*con).Outbounds = []interface{}{ out }
 	(*con).Dns.Servers = []interface{}{ "8.8.8.8", "1.1.1.1" }
 
