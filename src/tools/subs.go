@@ -372,7 +372,6 @@ func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
 
 func getStrFromSublink(subLink string) ([]string, error) {
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
-	//myClient := HttpClientGet(0, SubTimeout)
 	req := HttpNewRequest("GET", subLink)
 
 	resp, err := myClient.Do(req)
@@ -403,7 +402,7 @@ func getStrFromSublink(subLink string) ([]string, error) {
 
 func getVmFromYou() ([]string, error) {
 	log.Println("You fetching start...")
-	var cookie []*http.Cookie
+//	var cookie []*http.Cookie
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
 	req := HttpNewRequest("GET", "https://www.youneed.win/free-v2ray")
 
@@ -412,18 +411,21 @@ func getVmFromYou() ([]string, error) {
 		//log.Println(err)
 		return []string{}, err
 	}
-	defer rHtml.Body.Close()
+//	defer rHtml.Body.Close()
 
-	coo := rHtml.Cookies()
-	if len(coo) > 0 {
-		cookie = coo
-	}
+//	coo := rHtml.Cookies()
+//	if len(coo) > 0 {
+//		cookie = coo
+//	}
 
 	body, err := io.ReadAll(rHtml.Body)
 	if err != nil {
 		//log.Println(err)
 		return []string{}, err
 	}
+
+	rHtml.Body.Close()
+
 	ps_ajax := regexp.MustCompile(`var ps_ajax = \{.*,"nonce":"(.*?)".*,"post_id":"(\d+?)".*\};`)
 	psStr := ps_ajax.FindStringSubmatch(string(body))
 	if len(psStr) != 0 {
@@ -450,10 +452,10 @@ func getVmFromYou() ([]string, error) {
 		return []string{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Close = true
-	for i := range cookie {
-		req.AddCookie(cookie[i])
-	}
+//	req.Close = true
+//	for i := range cookie {
+//		req.AddCookie(cookie[i])
+//	}
 	respContent, err := myClient.Do(req)
 	if err != nil {
 		//log.Println(err)
@@ -490,9 +492,11 @@ func getAllFromFreefq() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
+//		defer resp.Body.Close()
 
 		contents, _ := ioutil.ReadAll(resp.Body)
+
+		resp.Body.Close()
 
 		doc, err := htmlquery.Parse(strings.NewReader(string(contents)))
 		if err != nil {
@@ -511,8 +515,11 @@ func getAllFromFreefq() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer resp2.Body.Close()
+//		defer resp2.Body.Close()
 		contents, _ = ioutil.ReadAll(resp2.Body)
+
+		resp2.Body.Close()
+
 		doc, err = htmlquery.Parse(strings.NewReader(string(contents)))
 		if err != nil {
 			return nil, err
@@ -526,8 +533,11 @@ func getAllFromFreefq() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer resp3.Body.Close()
+//		defer resp3.Body.Close()
 		contents, _ = ioutil.ReadAll(resp3.Body)
+
+		resp3.Body.Close()
+
 		strContents := string(contents)
 
 		//Extract links from content

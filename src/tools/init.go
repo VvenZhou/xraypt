@@ -49,8 +49,8 @@ const PRealLeastGood = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayp
 
 const NodeTimeoutTolerance = 3
 
-const subT = 5000
-const pT = 3000 //ms
+const subT = 8000
+const pT = 4000 //ms
 const pRealT = 2000 //ms
 const sT = 15000 //ms
 

@@ -33,7 +33,7 @@ func XrayDaemon(node *Node, cmdCh <-chan string, feedbackCh chan<- string) (erro
 		log.Fatal(err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	feedbackCh <- "running confirmed"
 
@@ -80,7 +80,7 @@ func (x *Xray) Run() (io.ReadCloser, error) {
 		log.Fatal(err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 	return stdout, nil
 }
 

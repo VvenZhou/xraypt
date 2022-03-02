@@ -159,7 +159,8 @@ func main() {
 }
 
 func startLogSystem() *os.File {
-	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+//	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	f, err := os.OpenFile(tools.LogPath, os.O_RDWR | os.O_CREATE ,0666)
 	if err != nil {
 		log.Fatal(err)
 	}
