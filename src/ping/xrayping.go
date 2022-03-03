@@ -6,12 +6,13 @@ import (
 	"time"
 	"net/http"
 	"errors"
+	"context"
 
 	"github.com/VvenZhou/xraypt/src/tools"
 //	"github.com/VvenZhou/xraypt/src/xray"
 )
 
-func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Node, float64, error){
+func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Node, float64, error){
 	var threadNum int
 
 	allLen := len(nodesIn)
@@ -33,8 +34,10 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 		panic("no enough ports")
 	}
 
+//	ctx, cancel := context.WithCancel(ctx)
+//	defer cancel()
 	for _, port := range(ports) {
-		go myPing(pingJob, pingResult, port, "https://duckduckgo.com")
+		go myPing(ctx, pingJob, pingResult, port, "https://duckduckgo.com")
 //		time.Sleep(time.Millisecond * 20)
 	}
 
@@ -76,10 +79,11 @@ func XrayPing(nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Nod
 }
 
 //func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
-func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) {
+func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) {
 	pClient := tools.HttpClientGet(port, tools.PTimeout)
 	pRClient := tools.HttpClientGet(port, tools.PRealTimeout)
-	req := tools.HttpNewRequest("HEAD", url)
+	req := tools.HttpNewRequest("GET", url)
+	req = req.WithContext(ctx)
 	for n := range jobs {
 		var good int = 0
 //		var fail int = 0
