@@ -61,8 +61,7 @@ func (n *Node) Init(ntype, shareLink string) {
 func (n *Node) CreateJson(dirPath string, port int) error {
 	err := (*n).genConfig()
 	if err != nil {
-		err = fmt.Errorf("createConfig:", err)
-		return err
+		return fmt.Errorf("genConfig:%w", err)
 	}
 
 	name := uuid.NewString()
@@ -71,20 +70,17 @@ func (n *Node) CreateJson(dirPath string, port int) error {
 
 	byteValue, err := json.MarshalIndent(*(n.Con), "", "    ")
 	if err != nil {
-		err = fmt.Errorf("json.MarshalIndent:", err)
-		return err
+		return fmt.Errorf("MarshalIndent:%w", err)
 	}
 
 	err = ioutil.WriteFile(n.JsonPath, byteValue, 0644)
 	if err != nil {
-		err = fmt.Errorf("WriteFile:", err)
-		return err
+		return fmt.Errorf("WriteFile:%w", err)
 	}
 
 	err = JsonChangePort(n.JsonPath, n.JsonPath, port)
 	if err != nil {
-		err = fmt.Errorf("JsonChangePort:", err)
-		return err
+		return fmt.Errorf("JsonChangePort:%w", err)
 	}
 
 	return nil
@@ -128,12 +124,14 @@ func (n *Node) genConfig() error {
 		case "vmess": 
 			var vmout Outbound
 			var vmShare VmessShare
-			VmlinkToVmshare(&vmShare, n.ShareLink)
-			n.ShareCon = vmShare
-			err := VmLinkToVmOut(&vmout, n.ShareLink)
+			err := VmlinkToVmshare(&vmShare, n.ShareLink)
 			if err != nil {
-				err = fmt.Errorf("VmLinkToVmOut:", err)
-				return err
+				return fmt.Errorf("VmlinkToVmshare:%w", err)
+			}
+			n.ShareCon = vmShare
+			err = VmLinkToVmOut(&vmout, n.ShareLink)
+			if err != nil {
+				return fmt.Errorf("VmLinkToVmOut:%w", err)
 			}
 			OutboundToTestConfig(&con, vmout)
 			n.Con = &con
@@ -141,8 +139,7 @@ func (n *Node) genConfig() error {
 			var ssout Outbound
 			err := SSLinkToSSout(&ssout, n.ShareLink)
 			if err != nil {
-				err = fmt.Errorf("SSLinkToSSout:", err)
-				return err
+				return fmt.Errorf("SSLinkToSSout:%w", err)
 			}
 			OutboundToTestConfig(&con, ssout)
 			n.Con = &con

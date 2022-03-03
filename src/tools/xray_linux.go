@@ -69,18 +69,18 @@ func (x *Xray) Init(port int, jsonPath string) error {
 
 func (x *Xray) Run() (io.ReadCloser, error) {
 	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
-	x.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}		// Linux specific
+	x.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}		// Linux specifical
 	stdout, err := x.cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("StdoutPipe:%w",err)
 	}
 
 	err = x.cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Start:%w",err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	return stdout, nil
 }
 
@@ -89,7 +89,7 @@ func (x *Xray) Stop() error {
 
 	_, err := x.cmd.Process.Wait()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Stop:%w",err)
 	}
 	return nil
 }

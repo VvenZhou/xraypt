@@ -47,8 +47,7 @@ func VmLinkToVmOut(vmess *Outbound, vmShareLink string) error {
 
 	err := VmlinkToVmshare(&vmShare, vmShareLink)
 	if err != nil {
-		err = fmt.Errorf("vmlinkToVmshare:", err)
-		return err
+		return fmt.Errorf("vmlinkToVmshare:%w", err)
 	}
 
 	port, _ := strconv.Atoi(vmShare.Port)
@@ -89,14 +88,12 @@ func VmlinkToVmshare(vmShareP *VmessShare, vmLink string) error {
 
 	data, err := base64.StdEncoding.DecodeString(vmLink)
 	if err != nil {
-		err = fmt.Errorf("base64Decode:", err)
-		return err
+		return fmt.Errorf("base64Decode:%w", err)
 	}
 
 	err = json.Unmarshal(data, &i)
 	if err != nil {
-		err = fmt.Errorf("jsonUnmarshal:", err)
-		return err
+		return fmt.Errorf("jsonUnmarshal:%w", err)
 	}
 
 	m := i.(map[string]interface{})

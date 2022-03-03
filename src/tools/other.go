@@ -15,13 +15,13 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 
 	byteValue, err := ioutil.ReadFile(jsonRead)
 	if err != nil {
-		return err
+		return fmt.Errorf("ReadFile:%w", err)
 	}
 
 	var con Config
 	err = json.Unmarshal(byteValue, &con)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unmarshal:%w", err)
 	}
 
 	for _, in := range con.Inbounds {
@@ -33,12 +33,12 @@ func JsonChangePort(jsonRead, jsonWrite string, port int) error {
 
 	byteValue, err = json.MarshalIndent(con, "", "    ")
 	if err != nil {
-		return err
+		return fmt.Errorf("MarshalIndent:%w", err)
 	}
 
 	err = ioutil.WriteFile(jsonWrite, byteValue, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("WriteFile:%w", err)
 	}
 
 	return nil

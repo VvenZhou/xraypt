@@ -21,7 +21,10 @@ type Bench struct {
 }
 
 func (b *Bench) Refresh(ctx context.Context) {
-	goodPingNodes, badPingNodes, _, _, _ := ping.XrayPing(ctx, append((*b).GoodNodes, (*b).BadNodes...))
+	goodPingNodes, badPingNodes, _, _, err := ping.XrayPing(ctx, append((*b).GoodNodes, (*b).BadNodes...))
+	if err != nil {
+		return fmt.Errorf("Bench.Refresh:%w", err)
+	}
 	sort.Stable(tools.ByDelay(goodPingNodes))
 
 	l := len(b.GoodNodes)
@@ -293,17 +296,23 @@ func firstIn(ctx context.Context) error {
 
 	nodeStack, err := tools.GetNodesFromFormatedFile(tools.GoodOutPath)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("GetNodesFromFormatedFile(Good):%w", err)
 	}
 
 	var bench Bench
-	updateOneBenchFromStackR(ctx, &bench, &nodeStack)
-	if len(bench.GoodNodes) == 0 {
-		log.Println("No good nodes in Good.txt, trying to find one in bad...")
+	err = updateOneBenchFromStackR(ctx, &bench, &nodeStack)
+	if err != nil {
+		log.Println("No good nodes in Good.txt, trying to find any in bad...")
 		refresh(ctx, []string{"bad"})
-		updateOneBenchFromStackR(ctx, &bench, &nodeStack)
-		if len(bench.GoodNodes) == 0 {
-			return errors.New("NO GOOD NODES AT ALL")
+		nodeStack, err = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+		if err != nil {
+			return fmt.Errorf("GetNodesFromFormatedFile(Good):%w", err)
+		}
+
+		err = updateOneBenchFromStackR(ctx, &bench, &nodeStack)
+		if err != nil {
+			return errors.New("No Good Nodes")
+//			return fmt.Errorf("updateOneBenchFromStackR:%w", err)
 		}
 	}
 
@@ -314,7 +323,10 @@ func firstIn(ctx context.Context) error {
 	(*FirstBench).Clean()
 	FirstBench.PreLength = len(FirstBench.GoodNodes)
 	nodeStackPush(&nodeStack, FirstBench.GoodNodes)
-	tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
+	err = tools.WriteNodesToFormatedFile(tools.GoodOutPath, nodeStack)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Good):%w", err))
+	}
 
 	xrayDaemonStartStop("start")
 
@@ -322,7 +334,7 @@ func firstIn(ctx context.Context) error {
 	return nil
 }
 
-func fetchNew(ctx context.Context) {
+func fetchNew(ctx context.Context) error {
 
 	log.Println("start oneShot")
 	goodPingNodes, badPingNodes, errorNodes := oneShot(ctx)
@@ -363,19 +375,26 @@ func fetchNew(ctx context.Context) {
 
 func routine(ctx context.Context) error {
 	var nodeStack []*tools.Node
+	var again true
 	getStack:
 	nodeStack, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
 	_, err := nodeStackPop(&nodeStack, FirstBench.PreLength)	//remove old firstBench nodes
 	if err != nil {
-		err = fmt.Errorf("nodeStackPop:", err)
-		return err
+		return fmt.Errorf("nodeStackPop:%w", err)
 	}
 
 	err = updateOneBenchFromStackR(ctx, FirstBench, &nodeStack)
 	if err != nil {
-		log.Println(err)
-		refresh(ctx, []string{"bad"})
-		goto getStack
+//		return fmt.Errorf("nodeStackPop:%w", err)
+		log.Println("updateOneBenchFromStackR:%w", err)
+		if again {
+			again = false
+			refresh(ctx, []string{"bad"})
+			goto getStack
+		}else{
+			(*FirstBench).Clean()
+			return errors.New("No Good Nodes")
+		}
 	}
 
 	l := len(FirstBench.GoodNodes)
@@ -387,10 +406,8 @@ func routine(ctx context.Context) error {
 		FirstBench.GoodNodes = FirstBench.GoodNodes[:benchSize]
 
 		(*FirstBench).Clean()
-
 	}else if l >= benchSize/2 && l <= benchSize {
 		(*FirstBench).Clean()
-
 	}else if l >= 0 && l < benchSize/2 {
 		for l < benchSize/2 {
 			err := updateOneBenchFromStackR(ctx, FirstBench, &nodeStack)
@@ -534,8 +551,7 @@ func updateOneBenchFromStackR(ctx context.Context, bench *Bench, stack *[]*tools
 	for {
 		nodes, err := nodeStackPop(stack, benchSize)
 		if err != nil {
-			err = fmt.Errorf("nodeStackPop:", err)
-			return err
+			return fmt.Errorf("nodeStackPop:", err)
 		}
 		(*bench).GoodNodes = append((*bench).GoodNodes, nodes...)
 		bench.Refresh(ctx)
@@ -545,7 +561,8 @@ func updateOneBenchFromStackR(ctx context.Context, bench *Bench, stack *[]*tools
 	}
 }
 
-func refresh(ctx context.Context, options []string) {
+func refresh(ctx context.Context, options []string) error{
+	var errs []error
 	for _, op := range options {
 		if op == "bench" {
 			log.Println("Refresh FirstBench")
@@ -556,19 +573,34 @@ func refresh(ctx context.Context, options []string) {
 			log.Println("Refresh goodOut.txt")
 
 			var nodes []*tools.Node
-			nodes, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
-			oldBadNodes, _ := tools.GetNodesFromFormatedFile(tools.BadOutPath)
+			nodes, err = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("GetNodesFromFormatedFile(Good):%w", err))
+			}
+			oldBadNodes, err := tools.GetNodesFromFormatedFile(tools.BadOutPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("GetNodesFromFormatedFile(Bad):%w", err))
+			}
 
 			log.Println("start ping nodes")
-			goodPingNodes, badPingNodes, _, _, _ := ping.XrayPing(ctx, nodes)
+			goodPingNodes, badPingNodes, _, _, err := ping.XrayPing(ctx, nodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("XrayPing:%w", err))
+			}
 			log.Println("ping nodes done")
 
 			badNodes := append(badPingNodes, oldBadNodes...)
 
 			sort.Stable(tools.ByDelay(goodPingNodes))
 
-			tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
-			tools.WriteNodesToFormatedFile(tools.BadOutPath, badNodes)
+			err = tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Good):%w", err))
+			}
+			err = tools.WriteNodesToFormatedFile(tools.BadOutPath, badNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Bad):%w", err))
+			}
 			//tools.WriteNodesToFormatedFile(tools.ErrorOutPath, errorNodes)
 
 			log.Println("Refresh goodOut.txt done")
@@ -576,19 +608,34 @@ func refresh(ctx context.Context, options []string) {
 			log.Println("Refresh badOut.txt")
 
 			var nodes []*tools.Node
-			nodes, _ = tools.GetNodesFromFormatedFile(tools.BadOutPath)
-			oldGoodNodes, _ := tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+			nodes, err := tools.GetNodesFromFormatedFile(tools.BadOutPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("GetNodesFromFormatedFile(Bad):%w", err))
+			}
+			oldGoodNodes, err := tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("GetNodesFromFormatedFile(Good):%w", err))
+			}
 
 			log.Println("start ping nodes")
-			goodPingNodes, badPingNodes, _, _, _ := ping.XrayPing(ctx, nodes)
+			goodPingNodes, badPingNodes, _, _, err := ping.XrayPing(ctx, nodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("XrayPing:%w", err))
+			}
 			log.Println("ping nodes done")
 
 			goodNodes := append(oldGoodNodes, goodPingNodes...)
 
 			sort.Stable(tools.ByDelay(goodNodes))
 
-			tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodNodes)
-			tools.WriteNodesToFormatedFile(tools.BadOutPath, badPingNodes)
+			err = tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Good):%w", err))
+			}
+			err = tools.WriteNodesToFormatedFile(tools.BadOutPath, badPingNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Bad):%w", err))
+			}
 			//tools.WriteNodesToFormatedFile(tools.ErrorOutPath, errorNodes)
 
 			log.Println("Refresh badOut.txt done")
@@ -596,21 +643,46 @@ func refresh(ctx context.Context, options []string) {
 			log.Println("Refresh All")
 
 			var nodes, nodes2 []*tools.Node
-			nodes, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
-			nodes2, _ = tools.GetNodesFromFormatedFile(tools.BadOutPath)
+			nodes, err = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("GetNodesFromFormatedFile(Good):%w", err))
+			}
+			nodes2, err = tools.GetNodesFromFormatedFile(tools.BadOutPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("GetNodesFromFormatedFile(Bad):%w", err))
+			}
 			allNodes := append(nodes, nodes2...)
 
 			log.Println("start ping nodes")
-			goodPingNodes, badPingNodes, _, _, _ := ping.XrayPing(ctx, allNodes)
+			goodPingNodes, badPingNodes, _, _, err := ping.XrayPing(ctx, allNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("XrayPing:%w", err))
+			}
 			log.Println("ping nodes done")
 
 			sort.Stable(tools.ByDelay(goodPingNodes))
 
-			tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
-			tools.WriteNodesToFormatedFile(tools.BadOutPath, badPingNodes)
+			err = tools.WriteNodesToFormatedFile(tools.GoodOutPath, goodPingNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Good):%w", err))
+			}
+			err = tools.WriteNodesToFormatedFile(tools.BadOutPath, badPingNodes)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("WriteNodesToFormatedFile(Bad):%w", err))
+			}
 			//tools.WriteNodesToFormatedFile(tools.ErrorOutPath, errorNodes)
 
 			log.Println("Refresh All done")
 		}
+	}
+	if len(errs) == 0 {
+		return nil
+	}else{
+		var err error
+		for i, e := range(errs) {
+			err = fmt.Errorf("%w|%w", err, e)
+		}
+		err = fmt.Errorf("(%w)", err)
+		return err
 	}
 }

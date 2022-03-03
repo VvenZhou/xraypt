@@ -31,8 +31,7 @@ func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
 	var ssSh SsShare
 	err := SsLinkToShare(&ssSh, ssShareLink)
 	if err != nil {
-		err = fmt.Errorf("ssLinkToShare:", err)
-		return err
+		return fmt.Errorf("ssLinkToShare:%w", err)
 	}
 
 	ser := server_ {

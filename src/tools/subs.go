@@ -325,7 +325,7 @@ func GetNodesFromFormatedFile(filePath string) ([]*Node, error) {
 	var nodes []*Node
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ReadFile:%w", err)
 	}
 	strs := strings.Fields(string(content))
 	for _, str := range strs {
@@ -362,10 +362,9 @@ func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
 	bytes := []byte(strings.Join(rows[:], "\n"))
 	err := os.WriteFile(filePath, bytes, 0644)
 	if err != nil {
-		log.Println(err)
-		return err
+		return fmt.Errorf("WriteFile:%w", err)
 	}else{
-		log.Println(filePath, "generated!")
+//		log.Println(filePath, "generated!")
 		return nil
 	}
 }

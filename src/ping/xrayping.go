@@ -31,7 +31,7 @@ func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*too
 	//TODO: get free ports
 	ports, err := tools.GetFreePorts(threadNum)
 	if err != nil {
-		panic("no enough ports")
+		return nil, nil, nil, 0, fmt.Errorf("GetFreePorts:%w", err)
 	}
 
 //	ctx, cancel := context.WithCancel(ctx)
@@ -94,25 +94,18 @@ func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.N
 		if err != nil {
 			n.AvgDelay = -1
 			result <- n
-			err = fmt.Errorf("CreateJson:", err)
+			err = fmt.Errorf("CreateJson:%w", err)
 			n.ErrorInfo = err
 			continue
 		}
 
-		err = x.Init(port, n.JsonPath)
-		if err != nil {
-			n.AvgDelay = -1
-			result <- n
-			err = fmt.Errorf("x.Init", err)
-			n.ErrorInfo = err
-			continue
-		}
+		x.Init(port, n.JsonPath)
 
 		_, err = x.Run()
 		if err != nil {
 			n.AvgDelay = -1
 			result <- n
-			err = fmt.Errorf("x.Run", err)
+			err = fmt.Errorf("x.Run:%w", err)
 			n.ErrorInfo = err
 			continue
 		}
@@ -195,7 +188,7 @@ func doPing(myClient *http.Client, req *http.Request) (int, error){
 	resp, err := myClient.Do(req) //send request
 	stop := time.Now()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("Do:%w", err)
 	}
 	defer resp.Body.Close()
 
@@ -203,7 +196,7 @@ func doPing(myClient *http.Client, req *http.Request) (int, error){
 
 //	if code >= 399 && code != 429{
 	if code >= 399 {
-		return 0, errors.New("Ping err: StatusCode error")
+		return 0, errors.New("doPing: StatusCode error")
 	}
 
 	elapsed := stop.Sub(start)
