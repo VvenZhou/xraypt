@@ -12,15 +12,45 @@ import (
 //	"github.com/VvenZhou/xraypt/src/xray"
 )
 
+type worker struct {
+	id int
+	err error
+}
+
+func (wk *worker)work(ctx context.Context,
+			jobs <-chan *tools.Node,
+			result chan<- *tools.Node,
+			workerCh chan<- *worker,
+			port int,
+			url string) (err error){
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				wk.err = err
+			}else{
+				wk.err = fmt.Errorf("Panic happened with %v", r)
+			}
+		}else{
+			wk.err = err
+		}
+		workerCh <- wk
+	}()
+
+	err = myPing(ctx, jobs, result, port, "https://duckduckgo.com")
+	return err
+}
+
 func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*tools.Node, []*tools.Node, float64, error){
 	var threadNum int
+	var done bool
+	done = false
 
 	allLen := len(nodesIn)
 	if allLen == 0 {
 		return nil, nil, nil, 0, nil
 	}
 	pingJob := make(chan *tools.Node, allLen)
-	pingResult := make(chan *tools.Node, allLen)
+	pingResult := make(chan *tools.Node)
 
 	if allLen < tools.PThreadNum {
 		threadNum = allLen
@@ -28,16 +58,20 @@ func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*too
 		threadNum = tools.PThreadNum
 	}
 
+
 	//TODO: get free ports
 	ports, err := tools.GetFreePorts(threadNum)
 	if err != nil {
 		return nil, nil, nil, 0, fmt.Errorf("GetFreePorts:%w", err)
 	}
 
-//	ctx, cancel := context.WithCancel(ctx)
+//	pingCtx, cancel := context.WithCancel(ctx)
 //	defer cancel()
-	for _, port := range(ports) {
-		go myPing(ctx, pingJob, pingResult, port, "https://duckduckgo.com")
+	workerCh := make(chan *worker, threadNum)
+	for i, port := range(ports) {
+//		go myPing(ctx, pingJob, pingResult, port, "https://duckduckgo.com")
+		wk := &worker{id: i}
+		go wk.work(ctx, pingJob, pingResult, workerCh, port, "https://duckduckgo.com")
 //		time.Sleep(time.Millisecond * 20)
 	}
 
@@ -51,12 +85,32 @@ func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*too
 
 
 	log.Println("length of all", allLen)
-	log.Println("waiting for goroutine")
+	log.Println("Ping start")
 
 	start := time.Now()
 	var goodPingNodes, badPingNodes, errorNodes []*tools.Node
-	for i:=0; i< allLen; i++ {
-		n := <- pingResult
+	go func() {
+		log.Println("Worker watcher start...")
+		workerCnt := 0
+		for wk := range(workerCh){
+			workerCnt += 1
+			if errors.Is(wk.err, context.Canceled) && workerCnt == threadNum {
+				done = true
+			}
+			if workerCnt == threadNum {
+				if done {
+					log.Println("Context canceled")
+				}
+				close(pingResult)
+				close(workerCh)
+				log.Println("...Worker watcher quit")
+				return
+			}
+		}
+	}()
+//	for i:=0; i< allLen; i++ {
+//		n := <- pingResult:
+	for n := range(pingResult) {
 		if n.AvgDelay == 9999 {
 			n.Timeout += 1
 			badPingNodes = append(badPingNodes, n)
@@ -72,14 +126,18 @@ func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*too
 
 	elapsed := stop.Sub(start)
 	timeOfPing := elapsed.Seconds()
-	log.Println("goroutine finished")
+	log.Println("Ping finished")
 	log.Println("length of good", len(goodPingNodes))
 	
-	return goodPingNodes, badPingNodes, errorNodes, timeOfPing, nil 
+	if done {
+		return goodPingNodes, badPingNodes, errorNodes, timeOfPing, tools.UsrIntErr
+	}else{
+		return goodPingNodes, badPingNodes, errorNodes, timeOfPing, nil 
+	}
 }
 
 //func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
-func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) {
+func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) error {
 	pClient := tools.HttpClientGet(port, tools.PTimeout)
 	pRClient := tools.HttpClientGet(port, tools.PRealTimeout)
 	req := tools.HttpNewRequest("GET", url)
@@ -137,11 +195,11 @@ func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.N
 					stat = true
 					break
 				}
-//			}else{
-//				fail += 1
-//				if fail >= tools.PCnt {
-//					break
-//				}
+			}else{
+				if errors.Is(err, context.Canceled) {
+					x.Stop()
+					return err
+				}
 			}
 			time.Sleep(time.Millisecond * 10)
 		}
@@ -157,6 +215,11 @@ func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.N
 				if err == nil {
 //					log.Println("delay:", delay)
 					pRealDelayList = append(pRealDelayList, delay)
+				}else{
+					if errors.Is(err, context.Canceled) {
+						x.Stop()
+						return err
+					}
 				}
 				time.Sleep(time.Millisecond * 10)
 			}
@@ -177,9 +240,11 @@ func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.N
 //		server.Close()
 		err = x.Stop()
 		if err != nil {
-			panic("x Stop error")
+			return err
 		}
 	}
+
+	return nil
 }
 
 func doPing(myClient *http.Client, req *http.Request) (int, error){

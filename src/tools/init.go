@@ -3,6 +3,7 @@ package tools
 import (
 	"runtime"
 	"time"
+	"errors"
 	"os"
 	"github.com/google/uuid"
 )
@@ -30,6 +31,8 @@ var HalfJsonsPath string
 var BackupPath string
 var ConfigPath string
 var OutPath string
+
+var UsrIntErr = errors.New("User interrupt") 
 
 var Mode int
 

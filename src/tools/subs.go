@@ -7,12 +7,14 @@ import (
 	"io"
 	"errors"
 	"os"
+	"fmt"
 	"encoding/json"
 	"encoding/base64"
 	"log"
 	"strings"
 	"strconv"
 	"regexp"
+	"context"
 	"github.com/antchfx/htmlquery"
 )
 
@@ -63,24 +65,32 @@ func (l *Links) AddToNodeLists(nodeLs *NodeLists) {
 }
 
 
-func GetAllNodes(nodeLs *NodeLists) {
+func GetAllNodes(ctx context.Context, nodeLs *NodeLists) error {
+	var errs []error
 	// Get nodes from GoodOut.txt
-	GetNodeLsFromFormatedFile(nodeLs, GoodOutPath)
+	err := GetNodeLsFromFormatedFile(nodeLs, GoodOutPath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Get NodeLs from FFile(GoodOut):%w", err))
+	}
 
 	var nodeLs2 NodeLists
-	GetNodeLsFromFormatedFile(&nodeLs2, BadOutPath)
-	for _, node := range nodeLs2.Vms {
-		if node.Timeout < MaxTimeoutCnt {
-			nodeLs.Vms = append(nodeLs.Vms, node)
+	err = GetNodeLsFromFormatedFile(&nodeLs2, BadOutPath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Get NodeLs from FFile(BadOut):%w", err))
+	}else{
+		for _, node := range nodeLs2.Vms {
+			if node.Timeout < MaxTimeoutCnt {
+				nodeLs.Vms = append(nodeLs.Vms, node)
+			}
+		}
+		for _, node := range nodeLs2.Sses {
+			if node.Timeout < MaxTimeoutCnt {
+				nodeLs.Sses = append(nodeLs.Sses, node)
+			}
 		}
 	}
-	sort.Stable(ByTimeout(nodeLs.Vms))
 
-	for _, node := range nodeLs2.Sses {
-		if node.Timeout < MaxTimeoutCnt {
-			nodeLs.Sses = append(nodeLs.Sses, node)
-		}
-	}
+	sort.Stable(ByTimeout(nodeLs.Vms))
 	sort.Stable(ByTimeout(nodeLs.Sses))
 
 	//Get nodes from Web
@@ -88,27 +98,34 @@ func GetAllNodes(nodeLs *NodeLists) {
 	var subLs Links
 	byteData, err := ioutil.ReadFile(SubsFilePath)
 	if err != nil {
-		log.Println("SubFile read error:", err)
+//		return fmt.Errorf("ReadFile(Subfile):%w", err)
+		errs = append(errs, fmt.Errorf("ReadFile(SubFile):%w", err))
 	}else{
 		log.Println("SubFile get...")
 		subs = strings.Fields(string(byteData))
+		err = getLinks(ctx, &subLs, subs)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
+			errs = append(errs, fmt.Errorf("GetLinks:%w", err))
+		}
+		subLs.AddToNodeLists(nodeLs)
 	}
-	getLinks(&subLs, subs)
-	subLs.AddToNodeLists(nodeLs)
 
 	//Remove duplicates
-	log.Println("start remove duplicates...")
+	log.Println("Removing duplicates...")
 	if FlagVm && len(nodeLs.Vms)!=0 {
-		log.Printf("vm befor: %d", len(nodeLs.Vms))
+		l := len(nodeLs.Vms)
 		VmRemoveDuplicateNodes(&(nodeLs.Vms))
-		log.Printf("after: %d", len(nodeLs.Vms))
+		log.Printf("vm %d -> %d", l,  len(nodeLs.Vms))
 	}
 	if FlagSs && len(nodeLs.Sses)!=0 {
-		log.Printf("ss befor: %d", len(nodeLs.Sses))
+		l := len(nodeLs.Sses)
 		SsRemoveDuplicateNodes(&(nodeLs.Sses))
-		log.Printf("after: %d\n", len(nodeLs.Sses))
+		log.Printf("ss %d -> %d\n", l, len(nodeLs.Sses))
 	}
-	log.Println("remove duplicates done...")
+	log.Println("...Remove duplicates done")
 
 
 	//Show total counts
@@ -127,43 +144,67 @@ func GetAllNodes(nodeLs *NodeLists) {
 	if FlagTrojan{
 		log.Println("get trojans:", len(nodeLs.Trojans))
 	}
+
+
+	if len(errs) == 0 {
+		return nil
+	}else{
+		var err error
+		for _, e := range(errs) {
+			err = fmt.Errorf("%w|%w", err, e)
+		}
+		err = fmt.Errorf("(%w)", err)
+		return err
+	}
 }
 
-func getLinks(subLs *Links, subs []string) {
+func getLinks(ctx context.Context, subLs *Links, subs []string) error {
 	var fail int
 	var links []string
 
 	// Get links from Freefq
-	START_FREEFQ:
-	strLinks, err := getAllFromFreefq()
-	if err != nil {
-		log.Println("[ERROR]: Get from Freefq:", err)
-		fail += 1
-		if fail < 3 {
-			goto START_FREEFQ
-		}
-	}else{
-		if len(strLinks) != 0 {
-			links = append(links, strLinks...)
+	fail = 0
+	for {
+		strLinks, err := getAllFromFreefq(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
+			log.Println("[Error] Freefq:", err)
+			fail += 1
+			if fail > 2 {
+				break
+			}
+		}else{
+			log.Println("Freefq get", len(strLinks), "links.")
+			if len(strLinks) != 0 {
+				links = append(links, strLinks...)
+			}
+			break
 		}
 	}
 
 	// Get Vms from YouNeedWind
 	if FlagVm {
 		fail = 0
-
-		START_YOU:
-		yousVms, err := getVmFromYou()
-		if err != nil {
-			log.Println("[ERROR]: getVmFrom You:", err)
-			fail += 1
-			if fail < 3 {
-				goto START_YOU
-			}
-		}else{
-			for _, vm := range yousVms {
-				l := strings.Split(vm, "vmess://")
-				subLs.Vms = append(subLs.Vms, l[1])
+		for {
+			youVms, err := getVmFromYou(ctx)
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return err
+				}
+				log.Println("[Error] You:", err)
+				fail += 1
+				if fail > 2 {
+					break
+				}
+			}else{
+				log.Println("You get", len(youVms), "links.")
+				for _, vm := range youVms {
+					l := strings.Split(vm, "vmess://")
+					subLs.Vms = append(subLs.Vms, l[1])
+				}
+				break
 			}
 		}
 	}
@@ -171,24 +212,31 @@ func getLinks(subLs *Links, subs []string) {
 	//Sublink
 	for _, sub := range subs {
 		fail = 0
-		START_SUBLINK:
-		strLinks, err := getStrFromSublink(sub)
-		if err != nil {
-			log.Println("[ERROR]", "SubGet:", sub, err)
-			fail += 1
-			if fail < 3 {
-				goto START_SUBLINK
-			}
-		}else{
-			if len(strLinks) != 0 {
-				links = append(links, strLinks...)
-				log.Println("SubString got!")
+		for {
+			strLinks, err := getStrFromSublink(ctx, sub)
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return err
+				}
+				log.Println("[Error] SubGet:", sub, err)
+				fail += 1
+				if fail > 2 {
+					break
+				}
+			}else{
+				log.Println("Subs get", len(strLinks), "links.")
+				if len(strLinks) != 0 {
+					links = append(links, strLinks...)
+				}
+				break
 			}
 		}
 	}
 
 	//Dispatch links
 	DispatchLinks(subLs, links)
+
+	return nil
 }
 
 func GetNodeLsFromFile(nodeLs *NodeLists, filePath string) {
@@ -198,14 +246,16 @@ func GetNodeLsFromFile(nodeLs *NodeLists, filePath string) {
 	subLs.AddToNodeLists(nodeLs)
 }
 
-func GetNodeLsFromFormatedFile(nodeLs *NodeLists, filePath string ) {
+func GetNodeLsFromFormatedFile(nodeLs *NodeLists, filePath string ) error {
 	var nodes []*Node
 	nodes, err := GetNodesFromFormatedFile(filePath)
 	if err != nil {
-		return
+		return fmt.Errorf("GetNodesFromFFile:%w", err)
 	}
 
 	DispatchNodes(nodeLs, nodes)
+
+	return nil
 }
 
 func getLinksFromFile(fileName string) ([]string, error){
@@ -369,20 +419,21 @@ func WriteNodesToFormatedFile(filePath string, nodes []*Node) error {
 	}
 }
 
-func getStrFromSublink(subLink string) ([]string, error) {
+func getStrFromSublink(ctx context.Context, subLink string) ([]string, error) {
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
 	req := HttpNewRequest("GET", subLink)
+	req = req.WithContext(ctx)
 
 	resp, err := myClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Do:%w", err)
 	}
 	defer resp.Body.Close()
 	contents, _ := ioutil.ReadAll(resp.Body)
 
 	byteData, err := base64.StdEncoding.DecodeString(string(contents))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Base64 decode:%w", err)
 	}
 	strData := string(byteData)
 
@@ -399,40 +450,31 @@ func getStrFromSublink(subLink string) ([]string, error) {
 	return links, nil
 }
 
-func getVmFromYou() ([]string, error) {
-	log.Println("You fetching start...")
+func getVmFromYou(ctx context.Context) ([]string, error) {
+	log.Println("You start...")
 //	var cookie []*http.Cookie
 	myClient := HttpClientGet(PreProxyPort, SubTimeout)
 	req := HttpNewRequest("GET", "https://www.youneed.win/free-v2ray")
+	req = req.WithContext(ctx)
 
 	rHtml, err := myClient.Do(req)
 	if err != nil {
 		//log.Println(err)
-		return []string{}, err
+		return nil, fmt.Errorf("Do(0):%w", err)
 	}
 //	defer rHtml.Body.Close()
 
-//	coo := rHtml.Cookies()
-//	if len(coo) > 0 {
-//		cookie = coo
-//	}
-
 	body, err := io.ReadAll(rHtml.Body)
 	if err != nil {
-		//log.Println(err)
-		return []string{}, err
+		return nil, fmt.Errorf("ReadAll:%w", err)
 	}
 
 	rHtml.Body.Close()
 
 	ps_ajax := regexp.MustCompile(`var ps_ajax = \{.*,"nonce":"(.*?)".*,"post_id":"(\d+?)".*\};`)
 	psStr := ps_ajax.FindStringSubmatch(string(body))
-	if len(psStr) != 0 {
-		log.Println("getVmFromYou nonce get.")
-		//log.Printf("nonce: %s post_id: %s\n", psStr[1], psStr[2])
-	}else{
-		log.Printf("getVmFromYou error: no nonce information!")
-		return []string{}, err
+	if len(psStr) == 0 {
+		return nil, errors.New("No nonce info")
 	}
 
 	nonceStr := psStr[1]
@@ -447,18 +489,14 @@ func getVmFromYou() ([]string, error) {
 	}
 	req, err = http.NewRequest(http.MethodPost, "https://www.youneed.win/wp-admin/admin-ajax.php", strings.NewReader(data.Encode()))
 	if err != nil {
-		//log.Println(err)
-		return []string{}, err
+		return nil, fmt.Errorf("http.NewRequest:%w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-//	req.Close = true
-//	for i := range cookie {
-//		req.AddCookie(cookie[i])
-//	}
+	req = req.WithContext(ctx)
+
 	respContent, err := myClient.Do(req)
 	if err != nil {
-		//log.Println(err)
-		return []string{}, err
+		return nil, fmt.Errorf("Do(1):%w", err)
 	}
 	defer respContent.Body.Close()
 
@@ -471,12 +509,13 @@ func getVmFromYou() ([]string, error) {
 	for _, vm := range vmStrStr {
 		vmes = append(vmes, vm[1])
 	}
-	log.Println("YouNeedWind get", len(vmes), "vmesses.")
+//	log.Println("YouNeedWind get", len(vmes), "vmesses.")
+	log.Println("...You finished")
 	return vmes, nil
 }
 
-func getAllFromFreefq() ([]string, error) {
-	log.Println("Freefq fetching start...")
+func getAllFromFreefq(ctx context.Context) ([]string, error) {
+	log.Println("Freefq start...")
 	//Get content from website
 	var links []string
 
@@ -486,6 +525,7 @@ func getAllFromFreefq() ([]string, error) {
 			"https://www.freefq.com/free-xray/"}
 	for _, subLink := range(subLinks) {
 		req := HttpNewRequest("GET", subLink)
+		req = req.WithContext(ctx)
 
 		resp, err := myClient.Do(req)
 		if err != nil {
@@ -493,7 +533,10 @@ func getAllFromFreefq() ([]string, error) {
 		}
 //		defer resp.Body.Close()
 
-		contents, _ := ioutil.ReadAll(resp.Body)
+		contents, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
 
 		resp.Body.Close()
 
@@ -510,6 +553,7 @@ func getAllFromFreefq() ([]string, error) {
 		log.Printf("%s\n", h2)
 
 		req = HttpNewRequest("GET", h2)
+		req = req.WithContext(ctx)
 		resp2, err := myClient.Do(req)
 		if err != nil {
 			return nil, err
@@ -528,6 +572,7 @@ func getAllFromFreefq() ([]string, error) {
 		log.Printf("%s\n", h3)
 
 		req = HttpNewRequest("GET", h3)
+		req = req.WithContext(ctx)
 		resp3, err := myClient.Do(req)
 		if err != nil {
 			return nil, err
@@ -548,7 +593,6 @@ func getAllFromFreefq() ([]string, error) {
 		}
 	}
 
-	log.Println("Freefq fetching Done.")
-	log.Println("Freefq get", len(links), "links.")
+	log.Println("...Freefq finished")
 	return links, nil
 }

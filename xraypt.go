@@ -26,6 +26,7 @@ var protocols = []string{
 	"trojan"}
 
 var status bool
+var userInt bool
 
 func main() {
 
@@ -49,6 +50,7 @@ func main() {
 	cmdCh := make(chan string)	
 	feedbackCh := make(chan bool)
 	dataCh := make(chan string, 3)
+	feedbackFromCli := make(chan bool)
 
 	ctx := context.Background()
 	ctx = setupCloseHandler(ctx)
@@ -61,12 +63,19 @@ func main() {
 //	status = <- feedbackCh
 //	log.Println()
 
-	go userCliWithContext(ctx, cmdCh, feedbackCh, dataCh)
 
-	<-ctx.Done()
+	go userCliWithContext(ctx, cmdCh, feedbackCh, dataCh, feedbackFromCli)
+
+	select{
+	case <-ctx.Done():
+		log.Println("main quit...")
+		<-feedbackFromCli
+	case <-feedbackFromCli:
+		log.Println("main quit...")
+	}
+
 	log.Println("...main quit")
-
-	time.Sleep(10 * time.Second)
+//	time.Sleep(100 * time.Millisecond)
 
 	return
 }
@@ -95,6 +104,7 @@ func startLogSystem() *os.File {
 				stdin.Discard(stdin.Buffered())		//flush stdin buffer
 				fmt.Printf("\n%s", prompt)
 			}else{
+				stdin.Discard(stdin.Buffered())		//flush stdin buffer
 				fmt.Printf("\n%s", wait)
 			}
                 }
@@ -110,9 +120,11 @@ func setupCloseHandler(ctx context.Context) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	userInt = false
 	go func(){
 		for{
 			<-c
+			userInt = true
 			log.Println("Ctrl+C pressed in Terminal")
 			cancel()
 		}
@@ -121,38 +133,56 @@ func setupCloseHandler(ctx context.Context) context.Context {
 	return ctx
 }
 
-func userCliWithContext(ctx context.Context, cmdCh chan<- string, feedbackCh <-chan bool, dataCh chan<- string){
+func userCliWithContext(ctx context.Context,
+			cmdToMon chan<- string,
+			feedbackFromMon <-chan bool,
+			dataToMon chan<- string,
+			feedbackToMain chan<- bool){
+	status = <- feedbackFromMon
+	log.Println()
 	for{
 		select{
 		case <-ctx.Done():
 			log.Println("user cli get quit sig...")
-			cmdCh <- "quit"
-			<- feedbackCh
+			cmdToMon <- "quit"
+			<- feedbackFromMon		//wait for monitor to quit
 
 			os.RemoveAll(tools.TempPath)
 			os.MkdirAll(tools.TempPath, 0755)
 
 			time.Sleep(100 * time.Millisecond)
+			feedbackToMain <- true
 			log.Println("user cli quit")
 			return
 		default:
-			userCli(cmdCh, feedbackCh, dataCh)
+			quit := userCli(cmdToMon, feedbackFromMon, dataToMon)
+			if quit {		//normal quit
+				log.Println("user cli get quit cmd...")
+				feedbackToMain <- true
+				log.Println("user cli quit")
+				return
+			}
 		}
 	}
 }
 
-func userCli(cmdCh chan<- string, feedbackCh <-chan bool, dataCh chan<- string) {
+func userCli(cmdCh chan<- string, feedbackCh <-chan bool, dataCh chan<- string) bool {
 	scanner := bufio.NewScanner(os.Stdin)
-	for {
+//	for {
 		var sList []string
-		getInput: for {
-
+//		getInput: for {
+		for {
 			scanner.Scan()
+			if userInt {
+				return false	//Must be false, for abnormal quit
+			}
 			sList = strings.Fields(scanner.Text())
 			l := len(sList)
 			if l != 0 {
 				status = false
 				break
+			}else{
+				log.Println()
 			}
 		}
 		switch sList[0] {
@@ -167,7 +197,7 @@ func userCli(cmdCh chan<- string, feedbackCh <-chan bool, dataCh chan<- string) 
 				default:
 					status = true
 					log.Println("bad data")
-					goto getInput
+					return false
 				}
 			}
 
@@ -205,7 +235,7 @@ func userCli(cmdCh chan<- string, feedbackCh <-chan bool, dataCh chan<- string) 
 			os.MkdirAll(tools.TempPath, 0755)
 
 			time.Sleep(100 * time.Millisecond)
-			return
+			return true
 		case "a", "auto" :
 			cmdCh <- "auto"
 			status = <- feedbackCh
@@ -233,11 +263,13 @@ func userCli(cmdCh chan<- string, feedbackCh <-chan bool, dataCh chan<- string) 
 			status = true
 			log.Println()
 
-			goto getInput
+//			goto getInput
 		default:
 			status = true
 			log.Println("bad cmd:", sList[0])
-			goto getInput
+//			goto getInput
 		}
-	}
+
+		return false
+//	}
 }
