@@ -3,6 +3,8 @@ package tools
 import (
 	"fmt"
 	"strings"
+	"errors"
+	"regexp"
 	"strconv"
 	"encoding/base64"
 	"log"
@@ -28,10 +30,9 @@ type ssSettings struct {
 }
 
 func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
-	var ssSh SsShare
-	err := SsLinkToShare(&ssSh, ssShareLink)
+	ssSh, err := SsLinkToShare(ssShareLink)
 	if err != nil {
-		return fmt.Errorf("ssLinkToShare:%w", err)
+		return fmt.Errorf("SsLinkToShare:%w", err)
 	}
 
 	ser := server_ {
@@ -52,112 +53,142 @@ func SSLinkToSSout(ss *Outbound, ssShareLink string) error {
 	return nil
 }
 
-func SsLinkToShare(ssShareP *SsShare, ssShareLink string) error{
-	var method, pwd, addr string
-	var port int
-	var err error
-
-	f := strings.Contains(ssShareLink, "@")
-	if f {
-		method, pwd, addr, port, err = linkToShareType0(ssShareLink)
-		if err != nil {
-			err = fmt.Errorf("linkToShareType0:", err)
-			return err
+func SsLinkToShare(ssShareLink string) (*SsShare, error) {
+	var ssSh *SsShare
+	o, err := linkToShareType0(ssShareLink)
+	if err != nil {
+		if !errors.Is(err, FormatErr) {
+			return nil, err
 		}
 	}else{
-		method, pwd, addr, port, err = linkToShareType1(ssShareLink)
+		ssSh = o
+		return ssSh, nil
+	}
+
+	o, err = linkToShareType1(ssShareLink)
+	if err != nil {
+		if !errors.Is(err, FormatErr) {
+			return nil, err
+		}
+	}else{
+		ssSh = o
+		return ssSh, nil
+	}
+
+//	panic(ssShareLink)
+
+	return nil, fmt.Errorf("%d: %w", ssShareLink, FormatErr)
+}
+
+func linkToShareType0(link string) (*SsShare, error) {		//Type: (base64)@(addr):(port)#comments
+	t0 := regexp.MustCompile(`([a-zA-Z0-9=]*)@(.*?):([0-9]*)#.*`)
+	result := t0.FindStringSubmatch(link)
+	if len(result) != 4 {
+		return nil, FormatErr
+	}
+
+	var base64DecodedBytes []byte
+	base64DecodedBytes, err := base64.StdEncoding.DecodeString(result[1])
+	if err != nil {
+		base64DecodedBytes, err = base64.StdEncoding.WithPadding(base64.NoPadding).DecodeString(result[1])
 		if err != nil {
-			err = fmt.Errorf("linkToShareType1:", err)
-			return err
+			err = fmt.Errorf("base64Decode:%d, %w", result[1], err)
+			return nil, err
 		}
 	}
 
-	ssShareP.Method = method
-	ssShareP.Pwd = pwd
-	ssShareP.Addr = addr
-	ssShareP.Port = port
+	methAndPwd:= strings.Split(string(base64DecodedBytes), ":")
+	if len(methAndPwd) != 2 {
+		return nil, FormatErr
+	}
 
-	return nil
+	port, err := strconv.Atoi(result[3])
+	if err != nil {
+		err = fmt.Errorf("strconv.Atoi:%w", err)
+		return nil, err
+	}
+
+	var ssSh SsShare
+	ssSh.Method = methAndPwd[0] 
+	ssSh.Pwd = methAndPwd[1]
+	ssSh.Addr = result[2]
+	ssSh.Port = port
+
+	return &ssSh, nil
 }
 
-func linkToShareType0(link string) (string, string, string, int, error) {
-	base64AndAddrPortEmail := strings.Split(link, "@") 
-	addrPortAndEmail := strings.Split(base64AndAddrPortEmail[1], "#")
-	addrAndPort := strings.Split(addrPortAndEmail[0], ":")
-
-	methAndPwd, err := base64.StdEncoding.DecodeString(base64AndAddrPortEmail[0])
-	if err != nil {
-		err = fmt.Errorf("ERROR: linkToVmShare: base64Decode:", err)
-		return "", "", "", 0, err
+func linkToShareType1(link string) (*SsShare, error) {		//Type: (base64)#(comments)
+	t1 := regexp.MustCompile(`([a-zA-Z0-9=]*)#.*`)
+	result := t1.FindStringSubmatch(link)
+	if len(result) != 2 {
+		return nil, FormatErr
 	}
 
-	strList3 := strings.Split(string(methAndPwd), ":")
-
-	method := strList3[0]
-	pwd := strList3[1]
-	addr := addrAndPort[0]
-	port, err := strconv.Atoi(addrAndPort[1])
+	var base64DecodedBytes []byte
+	base64DecodedBytes, err := base64.StdEncoding.DecodeString(result[1])
 	if err != nil {
-		err = fmt.Errorf("strconv.Atoi:", err)
-		return "", "", "", 0, err
+		base64DecodedBytes, err = base64.StdEncoding.WithPadding(base64.NoPadding).DecodeString(result[1])
+		if err != nil {
+			err = fmt.Errorf("base64Decode:%d, %w", result[1], err)
+			return nil, err
+		}
 	}
 
-	return method, pwd, addr, port, nil
-}
+	//Format 0
+	f0 := regexp.MustCompile(`(.*?):(.*?)@(.*?):([0-9]*)`)
+	result = f0.FindStringSubmatch(string(base64DecodedBytes))
+	if len(result)==5 {
+		port, err := strconv.Atoi(result[4])
+		if err != nil {
+			err = fmt.Errorf("strconv.Atoi:%w", err)
+			return nil, err
+		}
 
-func linkToShareType1(link string) (string, string, string, int, error) {
-	base64AndEmail := strings.Split(link, "#")
-	base64DecodedStr, err := base64.StdEncoding.DecodeString(base64AndEmail[0])
-	if err != nil {
-		err = fmt.Errorf("ERROR: linkToVmShare: base64Decode:", err)
-		return "", "", "", 0, err
+		var ssSh SsShare
+		ssSh.Method = result[1]
+		ssSh.Pwd = result[2]
+		ssSh.Addr = result[3]
+		ssSh.Port = port
+
+		return &ssSh, nil
 	}
 
-	methPAndAddrP := strings.Split(string(base64DecodedStr), "@") 
-	methodAndPwd := strings.Split(methPAndAddrP[0], ":")
-	addrAndPort := strings.Split(methPAndAddrP[1], ":")
-
-	method := methodAndPwd[0]
-	pwd := methodAndPwd[1]
-	addr := addrAndPort[0]
-	port, err := strconv.Atoi(addrAndPort[1])
-	if err != nil {
-		err = fmt.Errorf("strconv.Atoi:", err)
-		return "", "", "", 0, err
-	}
-
-	return method, pwd, addr, port, nil
+	return nil, FormatErr
 }
 
 func SsRemoveDuplicateNodes(nodes *[]*Node) {
-	var ssS SsShare
+	var ssS *SsShare
 	var nodesNoDup []*Node
 	var ssShareList []*SsShare
 	var flag bool
 
 
-	err := SsLinkToShare(&ssS, (*nodes)[0].ShareLink)
+	ssS, err := SsLinkToShare((*nodes)[0].ShareLink)
 	if err != nil {
-		log.Println("ERROR: SsRemoveDup: ssLinkToShare:", err)
+		log.Println("[Error]: SsRemoveDup: SsLinkToShare:", err)
 	}
 
 	nodesNoDup = append(nodesNoDup, (*nodes)[0])
-	ssShareList = append(ssShareList, &ssS)
+	ssShareList = append(ssShareList, ssS)
 
 	for _, node := range (*nodes){
-		var ssS2 SsShare
 		flag = true
-		SsLinkToShare(&ssS2, node.ShareLink)
+		ssS2, err := SsLinkToShare(node.ShareLink)
+		if err != nil {
+			log.Println("[Error]: SsRemoveDup: SsLinkToShare:", err)
+			continue
+		}
+
 		for _, ss := range ssShareList {
 			//if ssShareCompare(ss, &ssS2) {
-			if *ss == ssS2 {
+			if *ss == *ssS2 {
 				flag = false
 				break
 			}
 		}
 		if flag {
 			nodesNoDup = append(nodesNoDup, node)
-			ssShareList = append(ssShareList, &ssS2)
+			ssShareList = append(ssShareList, ssS2)
 		}
 	}
 

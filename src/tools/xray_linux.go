@@ -37,7 +37,7 @@ func XrayDaemon(node *Node, cmdCh <-chan string, feedbackCh chan<- string) (erro
 
 	time.Sleep(500 * time.Millisecond)
 
-	feedbackCh <- "running"
+	feedbackCh <- "Running"
 
 	for {
 		select {

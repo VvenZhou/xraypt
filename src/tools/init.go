@@ -33,12 +33,13 @@ var ConfigPath string
 var OutPath string
 
 var UsrIntErr = errors.New("User interrupt") 
+var FormatErr = errors.New("Format error")
 
 var Mode int
 
 var FlagVm, FlagVl, FlagSs, FlagSsr, FlagTrojan bool
 
-const MaxTimeoutCnt = 24
+const MaxTimeoutCnt = 50
 
 var PThreadNum int
 const SThreadNum = 10
@@ -53,7 +54,7 @@ const PRealLeastGood = 3	// Must be >= 3 due to the Avg algorithm(src/ping/xrayp
 const NodeTimeoutTolerance = 3
 
 const subT = 8000
-const pT = 4000 //ms
+const pT = 5000 //ms
 const pRealT = 2000 //ms
 const sT = 15000 //ms
 

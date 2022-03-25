@@ -16,6 +16,7 @@ import(
 type Bench struct {
 	GoodNodes []*tools.Node
 	BadNodes []*tools.Node
+	GoodLen int
 	PreLength int
 	MidDelay int
 }
@@ -31,7 +32,8 @@ func (b *Bench) Refresh(ctx context.Context) error {
 	}
 	sort.Stable(tools.ByDelay(goodPingNodes))
 
-	l := len(b.GoodNodes)
+	l := len(goodPingNodes)
+	b.GoodLen = l
 	if l > 0 {
 		if l%2 == 0 {
 			b.MidDelay = b.GoodNodes[l/2 -1].AvgDelay
@@ -187,7 +189,8 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 				mu.Lock()
 				log.Println("Cmd: Next")
 
-				if CurrentNodePos < len(FirstBench.GoodNodes) - 1 {
+//				log.Println("LEN:", FirstBench.GoodLen)
+				if CurrentNodePos < FirstBench.GoodLen - 1 {
 					xrayDaemonStartStop("stop")
 					CurrentNodePos += 1
 					log.Println("Next Position:", CurrentNodePos)
@@ -218,7 +221,7 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 					xrayDaemonStartStop("start")
 				}else{
 					xrayDaemonStartStop("stop")
-					CurrentNodePos = len(FirstBench.GoodNodes) - 1
+					CurrentNodePos = FirstBench.GoodLen - 1
 					log.Println("Pre Position:", CurrentNodePos)
 
 					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
@@ -401,6 +404,7 @@ func routine(ctx context.Context) error {
 	var nodeStack []*tools.Node
 	var again bool
 	again = true
+
 	getStack:
 	nodeStack, _ = tools.GetNodesFromFormatedFile(tools.GoodOutPath)
 	_, err := nodeStackPop(&nodeStack, FirstBench.PreLength)	//remove old firstBench nodes
@@ -415,7 +419,10 @@ func routine(ctx context.Context) error {
 		}
 		if again {
 			again = false
-			refresh(ctx, []string{"bad"})
+			err := refresh(ctx, []string{"bad"})
+			if errors.Is(err, tools.UsrIntErr) {
+				return err
+			}
 			goto getStack
 		}else{
 			(*FirstBench).Clean()
@@ -423,7 +430,7 @@ func routine(ctx context.Context) error {
 		}
 	}
 
-	l := len(FirstBench.GoodNodes)
+	l := FirstBench.GoodLen
 
 	if l > benchSize {
 		goodNodes := FirstBench.GoodNodes[benchSize:]
@@ -438,13 +445,24 @@ func routine(ctx context.Context) error {
 		for l < benchSize/2 {
 			err := updateOneBenchFromStackR(ctx, FirstBench, &nodeStack)
 			if err != nil {
-				log.Println(err)
-				refresh(ctx, []string{"bad"})
-				goto getStack
-			}
+				if errors.Is(err, tools.UsrIntErr){
+					return fmt.Errorf("updateBenchFromStack:%w", err)
+				}
 
-			l = len(FirstBench.GoodNodes)
-			(*FirstBench).Clean()
+				if again {
+					again = false
+					err := refresh(ctx, []string{"bad"})
+					if errors.Is(err, tools.UsrIntErr) {
+						return err
+					}
+					goto getStack
+				}else{
+					(*FirstBench).Clean()
+					break
+				}
+				continue
+			}
+			l = FirstBench.GoodLen
 		}
 	}
 

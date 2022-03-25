@@ -138,11 +138,12 @@ func XrayPing(ctx context.Context, nodesIn []*tools.Node) ([]*tools.Node, []*too
 
 //func myPing(jobs <-chan *tools.Node, result chan<- *tools.Node) {
 func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.Node, port int, url string) error {
-	pClient := tools.HttpClientGet(port, tools.PTimeout)
-	pRClient := tools.HttpClientGet(port, tools.PRealTimeout)
-	req := tools.HttpNewRequest("GET", url)
-	req = req.WithContext(ctx)
 	for n := range jobs {
+		pClient := tools.HttpClientGet(port, tools.PTimeout)
+		pRClient := tools.HttpClientGet(port, tools.PRealTimeout)
+		req := tools.HttpNewRequest("HEAD", url)
+		req = req.WithContext(ctx)
+
 		var good int = 0
 //		var fail int = 0
 		var stat bool = false
@@ -201,7 +202,7 @@ func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.N
 					return err
 				}
 			}
-			time.Sleep(time.Millisecond * 10)
+//			time.Sleep(time.Millisecond * 10)
 		}
 
 		if stat {
@@ -221,7 +222,7 @@ func myPing(ctx context.Context, jobs <-chan *tools.Node, result chan<- *tools.N
 						return err
 					}
 				}
-				time.Sleep(time.Millisecond * 10)
+//				time.Sleep(time.Millisecond * 10)
 			}
 			if len(pRealDelayList) >= tools.PRealLeastGood {
 				pRealAvgDelay = getAvg(pRealDelayList)

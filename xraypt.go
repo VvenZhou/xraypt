@@ -68,13 +68,13 @@ func main() {
 
 	select{
 	case <-ctx.Done():
-		log.Println("main quit...")
+		log.Println("Main quit...")
 		<-feedbackFromCli
 	case <-feedbackFromCli:
-		log.Println("main quit...")
+		log.Println("Main quit...")
 	}
 
-	log.Println("...main quit")
+	log.Println("...Main quit")
 //	time.Sleep(100 * time.Millisecond)
 
 	return
@@ -143,7 +143,7 @@ func userCliWithContext(ctx context.Context,
 	for{
 		select{
 		case <-ctx.Done():
-			log.Println("user cli get quit sig...")
+			log.Println("UserCli get quit sig...")
 			cmdToMon <- "quit"
 			<- feedbackFromMon		//wait for monitor to quit
 
@@ -152,14 +152,14 @@ func userCliWithContext(ctx context.Context,
 
 			time.Sleep(100 * time.Millisecond)
 			feedbackToMain <- true
-			log.Println("user cli quit")
+			log.Println("...UserCli quit")
 			return
 		default:
 			quit := userCli(cmdToMon, feedbackFromMon, dataToMon)
 			if quit {		//normal quit
-				log.Println("user cli get quit cmd...")
+				log.Println("UserCli get quit cmd...")
 				feedbackToMain <- true
-				log.Println("user cli quit")
+				log.Println("...UserCli quit")
 				return
 			}
 		}

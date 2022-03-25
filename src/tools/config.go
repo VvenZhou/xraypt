@@ -92,7 +92,7 @@ func GenFinalConfig(con *Config) {
 
 	r1 := RoutingRule{ Type: "field", Domain: []string{"geosite:category-ads-all"}, OutboundTag: "block"}
 	r2 := RoutingRule{ Type: "field", Domain: []string{"domain:music.126.net", "domain:nature.com", "geosite:cn", "geosite:bing", "geosite:category-media-cn", "geosite:apple"}, OutboundTag: "direct"}
-	r3 := RoutingRule{ Type: "field", Domain: []string{"geosite:google", "geosite:github", "geosite:telegram", "geosite:gfw", "geosite:geolocation-!cn"}, OutboundTag: "proxy"}
+	r3 := RoutingRule{ Type: "field", Domain: []string{"geosite:google", "geosite:github", "domain:youneed.win", "domain:freefq.com", "geosite:telegram", "geosite:gfw", "geosite:geolocation-!cn"}, OutboundTag: "proxy"}
 
 	o1 := Outbound{ Protocol: "freedom", Tag: "direct"}
 	o2 := Outbound{ Protocol: "blackhole", Tag: "block"}
