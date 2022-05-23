@@ -587,7 +587,7 @@ func xrayDaemonCtrl(cmd string) int {
 
 	switch cmd {
 	case "status" :
-		return reflag
+		return status
 	case "curPos" :
 		return curPos
 	case "init" :
