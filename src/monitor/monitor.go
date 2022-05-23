@@ -69,15 +69,13 @@ const benchSize = 8
 var cmdToDaemonCh = make(chan string)
 var feedbackFromDaemonCh = make(chan string)
 
-var CurrentNode *tools.Node
-var CurrentNodePos int
 var FirstBench *Bench
+var curPos, status, reflag int
+var curNode, preNode, nextNode *tools.Node
 
 var BadNodesBuffer []*tools.Node
 var curStatus int
 var preStatus int
-
-var daemonRunning bool
 
 func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- bool, dataCh <-chan string) {
 	log.Println("AutoMonitor Start")
@@ -156,7 +154,7 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 				}
 				log.Println("Cmd: FetchNew")
 
-				if daemonRunning == false {
+				if xrayDaemonCtrl("status") == 0 {
 					log.Println("XrayDaemon is not running, you can't fetch anything.")
 				}else{
 					fetchNew(ctx)
@@ -171,16 +169,16 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 				mu.Lock()
 				log.Println("Cmd: Pause")
 
-				if daemonRunning {
+				if xrayDaemonCtrl("status") == 1 {
 					if curStatus == 1 {
 						ticker.Stop()
 					}
-					xrayDaemonStartStop("stop")
+					xrayDaemonCtrl("stop")
 				}else{
 					if curStatus == 1 {
 						ticker.Reset(tools.RoutinePeriodDu)
 					}
-					xrayDaemonStartStop("start")
+					xrayDaemonCtrl("start")
 				}
 
 				mu.Unlock()
@@ -190,21 +188,22 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 				log.Println("Cmd: Next")
 
 //				log.Println("LEN:", FirstBench.GoodLen)
-				if CurrentNodePos < FirstBench.GoodLen - 1 {
-					xrayDaemonStartStop("stop")
-					CurrentNodePos += 1
-					log.Println("Next Position:", CurrentNodePos)
-
-					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
-					xrayDaemonStartStop("start")
-				}else{
-					xrayDaemonStartStop("stop")
-					CurrentNodePos = 0
-					log.Println("Next Position:", CurrentNodePos)
-
-					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
-					xrayDaemonStartStop("start")
-				}
+//				if CurrentNodePos < FirstBench.GoodLen - 1 {
+//					xrayDaemonStartStop("stop")
+//					CurrentNodePos += 1
+//					log.Println("Next Position:", CurrentNodePos)
+//
+//					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+//					xrayDaemonStartStop("start")
+//				}else{
+//					xrayDaemonStartStop("stop")
+//					CurrentNodePos = 0
+//					log.Println("Next Position:", CurrentNodePos)
+//
+//					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+//					xrayDaemonStartStop("start")
+//				}
+				xrayDaemonCtrl("next")
 
 				mu.Unlock()
 				feedbackCh <- true
@@ -212,21 +211,22 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 				mu.Lock()
 				log.Println("Cmd: Previous")
 
-				if CurrentNodePos > 0 {
-					xrayDaemonStartStop("stop")
-					CurrentNodePos -= 1
-					log.Println("Pre Position:", CurrentNodePos)
-
-					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
-					xrayDaemonStartStop("start")
-				}else{
-					xrayDaemonStartStop("stop")
-					CurrentNodePos = FirstBench.GoodLen - 1
-					log.Println("Pre Position:", CurrentNodePos)
-
-					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
-					xrayDaemonStartStop("start")
-				}
+//				if CurrentNodePos > 0 {
+//					xrayDaemonStartStop("stop")
+//					CurrentNodePos -= 1
+//					log.Println("Pre Position:", CurrentNodePos)
+//
+//					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+//					xrayDaemonStartStop("start")
+//				}else{
+//					xrayDaemonStartStop("stop")
+//					CurrentNodePos = FirstBench.GoodLen - 1
+//					log.Println("Pre Position:", CurrentNodePos)
+//
+//					CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+//					xrayDaemonStartStop("start")
+//				}
+				xrayDaemonCtrl("pre")
 
 				mu.Unlock()
 				feedbackCh <- true
@@ -236,9 +236,7 @@ func AutoMonitor(ctx context.Context, cmdCh <-chan string, feedbackCh chan<- boo
 				mu.Lock()
 				log.Println("Cmd: Quit")
 
-				if daemonRunning {
-					xrayDaemonStartStop("stop")
-				}
+				xrayDaemonCtrl("stop")
 
 
 				var nodeStack []*tools.Node
@@ -340,8 +338,8 @@ func firstIn(ctx context.Context) error {
 		}
 	}
 
-	CurrentNodePos = 0
-	CurrentNode = bench.GoodNodes[CurrentNodePos]
+//	CurrentNodePos = 0
+//	CurrentNode = bench.GoodNodes[CurrentNodePos]
 	FirstBench = &bench
 
 	(*FirstBench).Clean()
@@ -352,7 +350,9 @@ func firstIn(ctx context.Context) error {
 		return fmt.Errorf("WriteNodesToFormatedFile(Good):%w", err)
 	}
 
-	xrayDaemonStartStop("start")
+//	xrayDaemonStartStop("start")
+	xrayDaemonCtrl("init")
+	xrayDaemonCtrl("start")
 
 	log.Println("FirstIn done")
 	return nil
@@ -371,25 +371,29 @@ func fetchNew(ctx context.Context) error {
 
 	sort.Stable(tools.ByDelay(goodPingNodes))
 
-	CurrentNodePos = 0
+//	CurrentNodePos = 0
 	l := len(goodPingNodes)
-	if l >= benchSize {
-		CurrentNode = goodPingNodes[CurrentNodePos]
-		xrayDaemonStartStop("stop")
-		xrayDaemonStartStop("start")
-		FirstBench.GoodNodes = goodPingNodes[:benchSize]
+//	if l >= benchSize {
+//		CurrentNode = goodPingNodes[CurrentNodePos]
+//		xrayDaemonStartStop("stop")
+//		xrayDaemonStartStop("start")
+//		FirstBench.GoodNodes = goodPingNodes[:benchSize]
+//
+//		(*FirstBench).Clean()
+//		FirstBench.PreLength = benchSize
+//	}else if l > 0 {
+//		CurrentNode = goodPingNodes[CurrentNodePos]
+//		xrayDaemonStartStop("stop")
+//		xrayDaemonStartStop("start")
+//		FirstBench.GoodNodes = goodPingNodes
+//
+//		(*FirstBench).Clean()
+//		FirstBench.PreLength = len(goodPingNodes)
+//	}else{
+//		return errors.New("No good nodes")
+//	}
 
-		(*FirstBench).Clean()
-		FirstBench.PreLength = benchSize
-	}else if l > 0 {
-		CurrentNode = goodPingNodes[CurrentNodePos]
-		xrayDaemonStartStop("stop")
-		xrayDaemonStartStop("start")
-		FirstBench.GoodNodes = goodPingNodes
-
-		(*FirstBench).Clean()
-		FirstBench.PreLength = len(goodPingNodes)
-	}else{
+	if l <=0 {
 		return errors.New("No good nodes")
 	}
 
@@ -467,24 +471,29 @@ func routine(ctx context.Context) error {
 	}
 
 	log.Println("Ping CurrentNode...")
-	goodPingNodes, _, _, _, err := ping.XrayPing(ctx, []*tools.Node{CurrentNode})
+//	goodPingNodes, _, _, _, err := ping.XrayPing(ctx, []*tools.Node{CurrentNode})
+	goodPingNodes, _, _, _, err := ping.XrayPing(ctx, []*tools.Node{FirstBench.GoodNodes[xrayDaemonCtrl("curPos")]})
 	if err != nil {
 		if errors.Is(err, tools.UsrIntErr){
 			return fmt.Errorf("XrayPing:%w", err)
 		}
 	}
 	if goodPingNodes == nil {
-		xrayDaemonStartStop("stop")
-		CurrentNodePos = 0
-		CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
-		xrayDaemonStartStop("start")
+//		xrayDaemonStartStop("stop")
+//		CurrentNodePos = 0
+//		CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+//		xrayDaemonStartStop("start")
+		xrayDaemonCtrl("refresh")
+		xrayDaemonCtrl("next")
 	}else{
-		if CurrentNode.AvgDelay - FirstBench.MidDelay > 50 {
+		if FirstBench.GoodNodes[xrayDaemonCtrl("curPos")].AvgDelay - FirstBench.MidDelay > 50 {
 			log.Println("Update CurrentNode")
-			xrayDaemonStartStop("stop")
-			CurrentNodePos = 0
-			CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
-			xrayDaemonStartStop("start")
+//			xrayDaemonStartStop("stop")
+//			CurrentNodePos = 0
+//			CurrentNode = FirstBench.GoodNodes[CurrentNodePos]
+//			xrayDaemonStartStop("start")
+			xrayDaemonCtrl("refresh")
+			xrayDaemonCtrl("next")
 		}
 	}
 
@@ -572,18 +581,132 @@ func nodeStackPop(stack *[]*tools.Node, num int) ([]*tools.Node, error) {
 	return nodes, nil
 }
 
-func xrayDaemonStartStop(cmd string) {
+func xrayDaemonCtrl(cmd string) int {
+//	var curPos, status, reflag int
+//	var curNode, preNode, nextNode *tools.Node
+
 	switch cmd {
+	case "status" :
+		return reflag
+	case "curPos" :
+		return curPos
+	case "init" :
+		curPos = 0
+		status = 0
+		reflag = 0
+
+		preNode = FirstBench.GoodNodes[FirstBench.GoodLen-1]
+		curNode = FirstBench.GoodNodes[0]
+		if FirstBench.GoodLen > 1 {
+			nextNode = FirstBench.GoodNodes[1]
+		}else{
+			nextNode = FirstBench.GoodNodes[0]
+		}
+
+//		log.Println("%v", curNode)
+	case "next" :
+		running := false
+		if xrayDaemonCtrl("stop") == 0 {
+			running = true
+		}
+
+		preNode = curNode
+		curNode = nextNode
+
+		log.Println("curPos:", curPos)
+
+		if reflag == 1 {
+			curPos = 0
+			reflag = 0
+			if FirstBench.GoodLen > 1 {
+				nextNode = FirstBench.GoodNodes[1]
+			}else{
+				nextNode = FirstBench.GoodNodes[0]
+			}
+		}else if curPos == FirstBench.GoodLen-2 {
+			curPos += 1
+			nextNode = FirstBench.GoodNodes[0]
+		}else if curPos == FirstBench.GoodLen-1 {
+			curPos = 0
+			if FirstBench.GoodLen > 1 {
+				nextNode = FirstBench.GoodNodes[1]
+			}else{
+				nextNode = FirstBench.GoodNodes[0]
+			}
+		}else{
+			curPos += 1
+			nextNode = FirstBench.GoodNodes[curPos + 1]
+		}
+
+		log.Println("->", curPos)
+
+		if running {
+			xrayDaemonCtrl("start")
+		}
+	case "pre" :
+		running := false
+		if xrayDaemonCtrl("stop") == 0 {
+			running = true
+		}
+
+		nextNode = curNode
+		curNode = preNode
+
+		log.Println("curPos:", curPos)
+
+		if curPos == 1 {
+			curPos -= 1
+			preNode = FirstBench.GoodNodes[FirstBench.GoodLen-1]
+		}else if curPos == 0 {
+			curPos = FirstBench.GoodLen - 1
+			preNode = FirstBench.GoodNodes[curPos - 1]
+		}else{
+			curPos -= 1
+			nextNode = FirstBench.GoodNodes[curPos - 1]
+		}
+
+		log.Println("->", curPos)
+
+		if running {
+			xrayDaemonCtrl("start")
+		}
+	case "refresh" :
+		nextNode = FirstBench.GoodNodes[0]
+		reflag = 1
 	case "start" :
-		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
-		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
-		daemonRunning = true
+		if status == 0 {
+			go tools.XrayDaemon(curNode, cmdToDaemonCh, feedbackFromDaemonCh)
+			log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+//			xrayDaemonStartStop("start")
+			status = 1
+		}else{
+			return 1
+		}
 	case "stop" :
-		cmdToDaemonCh <- "TERM"
-		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
-		daemonRunning = false
+		if status == 1 {
+			cmdToDaemonCh <- "TERM"
+			log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+//			xrayDaemonStartStop("stop")
+			status = 0
+		}else{
+			return 1
+		}
 	}
+
+	return 0
 }
+
+//func xrayDaemonStartStop(cmd string) {
+//	switch cmd {
+//	case "start" :
+//		go tools.XrayDaemon(CurrentNode, cmdToDaemonCh, feedbackFromDaemonCh)
+//		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+//	case "stop" :
+//		cmdToDaemonCh <- "TERM"
+//		log.Println("XrayDaemon :", <- feedbackFromDaemonCh)
+//	}
+//}
+
 
 //not used yet
 //func nodesToBenches (nodes []*tools.Node) []*Bench {
@@ -635,7 +758,8 @@ func refresh(ctx context.Context, options []string) error {
 				}
 				errs = append(errs, fmt.Errorf("XrayPing:%w", err))
 			}
-			CurrentNodePos = -1
+//			CurrentNodePos = -1
+			xrayDaemonCtrl("refresh")
 			log.Println("Refresh FirstBench done")
 		}else if op == "good" {
 			log.Println("Refresh goodOut.txt")

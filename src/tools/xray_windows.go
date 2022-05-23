@@ -1,9 +1,9 @@
+//go:build windows
 package tools
 
 import(
 	"os/exec"
 	"strconv"
-	"os"
 	"time"
 	"log"
 	"io"
@@ -68,6 +68,8 @@ func (x *Xray) Init(port int, jsonPath string) error {
 
 func (x *Xray) Run() (io.ReadCloser, error) {
 	x.cmd = exec.Command(XrayPath, "-c", x.JsonPath)
+//	x.cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP}		// Windows specific
+//	x.cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}		// Linux specific
 	stdout, err := x.cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -83,8 +85,16 @@ func (x *Xray) Run() (io.ReadCloser, error) {
 }
 
 func (x *Xray) Stop() error {
+
+//	err := x.cmd.Wait()
+//	if err != nil {
+//		panic("process wait")
+//		return fmt.Errorf("Stop:%w",err)
+//	}
+//	return nil
+
 	kill := exec.Command("TASKKILL", "/T", "/F", "/PID", strconv.Itoa(x.cmd.Process.Pid))
-	kill.Stderr = os.Stderr
+	kill.Stderr = nil
 	kill.Stdout = nil
 	return kill.Run()
 }
